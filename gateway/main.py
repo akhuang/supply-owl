@@ -234,7 +234,7 @@ body{font-family:var(--sans);background:#E8E8E8;color:var(--ink1);-webkit-font-s
 </div>
 </div>
 <script>
-const body=document.getElementById('chatBody'),input=document.getElementById('input'),btn=document.getElementById('btn');
+const body=document.getElementById('chatBody'),chatInput=document.getElementById('input'),btn=document.getElementById('btn');
 
 function md(text){
   return text
@@ -270,7 +270,7 @@ function addMsg(role,html,meta){
   body.scrollTop=body.scrollHeight;
 }
 
-async function ask(msg){input.value=msg;send()}
+async function ask(msg){chatInput.value=msg;send()}
 
 let loading=null;
 function showLoading(){
@@ -281,8 +281,8 @@ function showLoading(){
 }
 
 async function send(){
-  const msg=input.value.trim();if(!msg)return;
-  addMsg('user',msg);input.value='';btn.disabled=true;
+  const msg=chatInput.value.trim();if(!msg)return;
+  addMsg('user',msg);chatInput.value='';btn.disabled=true;
   document.querySelectorAll('.preset').forEach(b=>b.disabled=true);
   showLoading();
   const t0=Date.now();
@@ -298,10 +298,10 @@ async function send(){
   }catch(e){if(loading)loading.remove();addMsg('owl','请求失败: '+e.message)}
   btn.disabled=false;
   document.querySelectorAll('.preset').forEach(b=>b.disabled=false);
-  input.focus();
+  chatInput.focus();
 }
 
-input.addEventListener('keydown',e=>{if(e.key==='Enter')send()});
+chatInput.addEventListener('keydown',e=>{if(e.key==='Enter')send()});
 </script>
 </body></html>"""
 
