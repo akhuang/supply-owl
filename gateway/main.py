@@ -26,7 +26,7 @@ app.add_middleware(
 
 # ========== Config ==========
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
-MODEL = os.getenv("OWL_MODEL", "qwen3:4b")
+MODEL = os.getenv("OWL_MODEL", "qwen3:1.7b")
 PROJECT_ROOT = Path(__file__).parent.parent
 
 # Load SOUL.md + MEMORY.md as system prompt
@@ -275,7 +275,8 @@ async function ask(msg){input.value=msg;send()}
 let loading=null;
 function showLoading(){
   loading=document.createElement('div');loading.className='msg owl';
-  loading.innerHTML='<div class="msg-head">🦉 owl</div><div class="msg-body" style="color:var(--ink3)">思考中...</div>';
+  loading.innerHTML='<div class="msg-head">🦉 owl</div><div class="msg-body" style="color:var(--ink3)">查数据 + 思考中... (CPU模式约30-60秒)</div>';
+  loading.id='loading-msg';
   body.appendChild(loading);body.scrollTop=body.scrollHeight;
 }
 
@@ -286,7 +287,7 @@ async function send(){
   showLoading();
   const t0=Date.now();
   try{
-    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg}),signal:AbortSignal.timeout(180000)});
     const data=await r.json();
     if(loading)loading.remove();
     const elapsed=((Date.now()-t0)/1000).toFixed(1)+'s';
