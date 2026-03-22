@@ -26,4 +26,5 @@ out/
 Thumbs.db
 
 # Hermes
+hermes/
 .hermes/state.db
