@@ -64,7 +64,7 @@ def chat(messages, model=MODEL):
 
 
 # ========== supply-cli ==========
-CONTRACT_RE = re.compile(r'\b(1Y0[A-Za-z0-9]{6,11}|00E[A-Za-z0-9]{6,11})\b')
+CONTRACT_RE = re.compile(r'\b(1Y0[A-Za-z0-9]{11}|00E[A-Za-z0-9]{11})\b')
 BATCH_RE = re.compile(r'\b(HW[A-Z]\d{3,5}[A-Z])\b')
 
 def find_contracts(text: str) -> List[str]:
