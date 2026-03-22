@@ -6,13 +6,14 @@ FastAPI 薄层，桥接 Web UI 和 Hermes Agent。
 import json
 import re
 import os
+import subprocess
 import urllib.request
 from pathlib import Path
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 app = FastAPI(title="Supply Owl Gateway")
 
@@ -60,6 +61,87 @@ def chat(messages, model=MODEL):
     if "<think>" in content:
         content = re.sub(r'<think>.*?</think>\s*', '', content, flags=re.DOTALL)
     return content.strip()
+
+
+# ========== supply-cli ==========
+CONTRACT_RE = re.compile(r'\b(1Y0[A-Za-z0-9]{6,11}|00E[A-Za-z0-9]{6,11})\b')
+BATCH_RE = re.compile(r'\b(HW[A-Z]\d{3,5}[A-Z])\b')
+
+def find_contracts(text: str) -> List[str]:
+    return list(set(CONTRACT_RE.findall(text.upper())))
+
+def find_batches(text: str) -> List[str]:
+    return list(set(BATCH_RE.findall(text.upper())))
+
+def supply_cli(cmd: str, *args) -> dict:
+    """Call supply-cli and return parsed JSON"""
+    try:
+        result = subprocess.run(
+            ["supply-cli", cmd, *args],
+            capture_output=True, text=True, timeout=15
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return json.loads(result.stdout)
+        return {"error": result.stderr.strip() or "empty response"}
+    except subprocess.TimeoutExpired:
+        return {"error": "supply-cli timeout"}
+    except Exception as e:
+        return {"error": str(e)}
+
+def enrich_context(user_message: str) -> str:
+    """Detect contract numbers in message, auto-query supply-cli, return enriched context"""
+    contracts = find_contracts(user_message)
+    if not contracts:
+        return ""
+
+    parts = []
+    for cno in contracts[:5]:  # max 5 contracts per query
+        data = supply_cli("detail", cno)
+        if data.get("found"):
+            batches_info = []
+            for b in data.get("batches", []):
+                cpd = b.get("cpd") or "未承诺"
+                rpd = b.get("rpd") or "无"
+                apd = b.get("apd") or "未交单"
+                status = b.get("demandStatus", "")
+                urgent = "急单" if b.get("urgentFlag") == "Y" else ""
+                batch_no = b.get("batchNo", "?")
+
+                # CPD vs RPD judgment
+                if cpd == "未承诺":
+                    risk = "CPD未承诺"
+                elif cpd > rpd and rpd != "无":
+                    risk = f"CPD不满足RPD(差{_days_diff(rpd, cpd)}天)"
+                else:
+                    risk = "CPD满足RPD"
+
+                line = f"  {batch_no}: CPD={cpd} RPD={rpd} APD={apd} {risk} {urgent} {status}".strip()
+                batches_info.append(line)
+
+            parts.append(
+                f"合同 {cno} ({data.get('projectName','')}/{data.get('customer','')}):\n"
+                + "\n".join(batches_info)
+            )
+        else:
+            parts.append(f"合同 {cno}: 未找到数据")
+
+    # Also check anomalies
+    for cno in contracts[:3]:
+        anomaly = supply_cli("anomalies", cno)
+        if anomaly.get("anomalies"):
+            parts.append(f"合同 {cno} 异常: {json.dumps(anomaly['anomalies'], ensure_ascii=False)}")
+
+    return "\n\n".join(parts)
+
+def _days_diff(date1: str, date2: str) -> int:
+    """Simple date diff in days"""
+    try:
+        from datetime import datetime
+        d1 = datetime.strptime(date1, "%Y-%m-%d")
+        d2 = datetime.strptime(date2, "%Y-%m-%d")
+        return abs((d2 - d1).days)
+    except:
+        return 0
 
 
 # ========== Models ==========
@@ -154,14 +236,26 @@ input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
 @app.post("/api/chat")
 async def api_chat(msg: ChatMessage):
-    """简单对话接口"""
+    """对话接口 — 自动检测合同号并查询 supply-cli"""
+    # Auto-enrich: detect contract numbers → query supply-cli
+    context = enrich_context(msg.message)
+    enriched_contracts = find_contracts(msg.message)
+
+    user_content = msg.message
+    if context:
+        user_content = f"{msg.message}\n\n---\n以下是系统自动查询到的数据（来自 supply-cli）:\n{context}"
+
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": msg.message}
+        {"role": "user", "content": user_content}
     ]
     try:
         reply = chat(messages)
-        return {"reply": reply}
+        return {
+            "reply": reply,
+            "enriched": enriched_contracts,
+            "data_source": "supply-cli" if context else None
+        }
     except Exception as e:
         return {"error": str(e)}
 
