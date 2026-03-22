@@ -162,74 +162,145 @@ class ChatMessage(BaseModel):
 def index():
     return """<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>Supply Owl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+:root{--sans:'IBM Plex Sans',-apple-system,sans-serif;--mono:'IBM Plex Mono','SF Mono',monospace;--bg:#FAFAFA;--card:#FFF;--border:#DDD;--border-light:#EEE;--ink1:#1A1A1A;--ink2:#555;--ink3:#888;--ink4:#AAA;--owl-bg:#FAF6F0;--owl-border:#EDE6DA;--green:#2D7A3F;--red:#C7352B;--amber:#B8860B}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,sans-serif;background:#F0F1F3;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#111}
-.container{max-width:600px;width:100%;padding:20px}
-h1{font-size:24px;margin-bottom:4px}
-.sub{color:#6B6F76;font-size:14px;margin-bottom:24px}
-.chat-box{background:#FFF;border:1px solid #D5D8DC;border-radius:3px;min-height:300px;max-height:500px;overflow-y:auto;padding:16px;margin-bottom:12px;font-size:13px;line-height:1.6}
-.msg{margin-bottom:12px;padding:8px 12px;border-radius:3px}
-.msg.user{background:#F0F1F3;text-align:right}
-.msg.owl{background:#FAF6F0;border:1px solid #EDE6DA}
-.msg .label{font-size:11px;color:#A0A4AB;margin-bottom:2px}
-.input-row{display:flex;gap:8px}
-input{flex:1;padding:10px 12px;border:1px solid #D5D8DC;border-radius:3px;font-size:13px;outline:none}
-input:focus{border-color:#999}
-button{padding:10px 20px;background:#111;color:#FFF;border:none;border-radius:3px;font-size:13px;font-weight:600;cursor:pointer}
-button:hover{background:#333}
-button:disabled{opacity:0.4;cursor:not-allowed}
-.status{font-size:11px;color:#A0A4AB;margin-top:8px;text-align:center}
+body{font-family:var(--sans);background:#E8E8E8;color:var(--ink1);-webkit-font-smoothing:antialiased;display:flex;justify-content:center;min-height:100vh;padding:24px}
+.shell{width:100%;max-width:720px;display:flex;flex-direction:column;gap:0}
+.header{padding:16px 0 12px;display:flex;align-items:center;gap:12px}
+.header h1{font-size:18px;font-weight:700}
+.header .sub{font-size:12px;color:var(--ink3);margin-left:auto;font-family:var(--mono)}
+.chat{flex:1;background:var(--card);border:1px solid var(--border);display:flex;flex-direction:column;min-height:500px;max-height:calc(100vh - 140px)}
+.chat-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.chat-body::-webkit-scrollbar{width:3px}
+.chat-body::-webkit-scrollbar-thumb{background:var(--border)}
+.msg{max-width:90%;font-size:13px;line-height:1.7}
+.msg.user{align-self:flex-end;background:var(--bg);border:1px solid var(--border-light);padding:8px 14px}
+.msg.owl{align-self:flex-start;background:var(--owl-bg);border:1px solid var(--owl-border);padding:10px 14px}
+.msg-head{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px;color:var(--ink4);font-family:var(--mono)}
+.msg-head .elapsed{margin-left:auto;color:var(--ink4)}
+.msg-head .source{color:var(--green);font-weight:600}
+.msg-body p{margin:0 0 8px}
+.msg-body p:last-child{margin:0}
+.msg-body strong{font-weight:700;color:var(--ink1)}
+.msg-body ul,.msg-body ol{margin:4px 0 8px 18px}
+.msg-body li{margin:2px 0}
+.msg-body code{font-family:var(--mono);font-size:12px;background:rgba(0,0,0,0.05);padding:1px 4px}
+.msg-body h3{font-size:13px;font-weight:700;margin:8px 0 4px}
+.msg-body table{border-collapse:collapse;font-size:12px;margin:6px 0}
+.msg-body th,.msg-body td{border:1px solid var(--border-light);padding:3px 8px;text-align:left}
+.msg-body th{background:var(--bg);font-weight:600;font-size:11px}
+.msg-body blockquote{border-left:3px solid var(--owl-border);padding:4px 10px;margin:6px 0;color:var(--ink2);font-size:12px}
+.msg-body hr{border:none;border-top:1px solid var(--border-light);margin:8px 0}
+.chat-input{border-top:1px solid var(--border);display:flex;align-items:center;padding:0}
+.chat-input input{flex:1;border:none;outline:none;padding:12px 16px;font-family:var(--sans);font-size:13px;color:var(--ink1);background:transparent}
+.chat-input input::placeholder{color:var(--ink4)}
+.chat-input button{padding:12px 20px;background:var(--ink1);color:#FFF;border:none;font-family:var(--sans);font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.02em}
+.chat-input button:hover{background:#333}
+.chat-input button:disabled{opacity:0.3;cursor:not-allowed}
+.footer{padding:6px 0;display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--ink4);letter-spacing:0.02em}
+.presets{display:flex;gap:6px;padding:8px 16px;background:var(--bg);border-top:1px solid var(--border-light);flex-wrap:wrap}
+.preset{font-family:var(--sans);font-size:11px;padding:4px 10px;border:1px solid var(--border);background:var(--card);color:var(--ink2);cursor:pointer}
+.preset:hover{border-color:var(--ink3);color:var(--ink1)}
 </style></head>
 <body>
-<div class="container">
+<div class="shell">
+<div class="header">
 <h1>🦉 Supply Owl</h1>
-<div class="sub">你的夜行分身 · 试试问合同相关的问题</div>
-<div class="chat-box" id="chatBox"></div>
-<div class="input-row">
-<input id="input" placeholder="输入问题... 例如: 合同 1Y01052508474L 的 HWC0044Q 没承诺怎么办" autofocus>
+<span class="sub">""" + MODEL + """ · Ollama</span>
+</div>
+<div class="chat">
+<div class="chat-body" id="chatBody">
+<div class="msg owl">
+<div class="msg-head">🦉 owl</div>
+<div class="msg-body"><p>我是 Owl，帮你盯合同、催承诺、提拉跟进的。直接给我合同号就行。</p></div>
+</div>
+</div>
+<div class="presets">
+<button class="preset" onclick="ask('合同 1Y01052508474L 什么情况')">1Y01052508474L 什么情况</button>
+<button class="preset" onclick="ask('1Y02893760876C 需要提拉')">1Y02893760876C 提拉</button>
+<button class="preset" onclick="ask('1Y04567891234D 的 HWL0007S 怎么处理')">HWL0007S 怎么处理</button>
+</div>
+<div class="chat-input">
+<input id="input" placeholder="合同号、批次号、或任何问题..." autofocus>
 <button id="btn" onclick="send()">发送</button>
 </div>
-<div class="status" id="status">Model: """ + MODEL + """ via Ollama</div>
+</div>
+<div class="footer">
+<span>supply-cli connected</span>
+<span id="lastElapsed"></span>
+</div>
 </div>
 <script>
-const chatBox = document.getElementById('chatBox');
-const input = document.getElementById('input');
-const btn = document.getElementById('btn');
-const status = document.getElementById('status');
+const body=document.getElementById('chatBody'),input=document.getElementById('input'),btn=document.getElementById('btn');
 
-function addMsg(role, text) {
-  const d = document.createElement('div');
-  d.className = 'msg ' + role;
-  d.innerHTML = '<div class="label">' + (role === 'user' ? '你' : '🦉 Owl') + '</div>' + text.replace(/\\n/g, '<br>');
-  chatBox.appendChild(d);
-  chatBox.scrollTop = chatBox.scrollHeight;
+function md(text){
+  return text
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/^[-*] (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/s,function(m){return '<ul>'+m+'</ul>'})
+    .replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>')
+    .replace(/^---$/gm,'<hr>')
+    .replace(/\n\n/g,'</p><p>')
+    .replace(/\n/g,'<br>')
+    .replace(/^/,'<p>').replace(/$/,'</p>')
+    .replace(/<p><h3>/g,'<h3>').replace(/<\/h3><\/p>/g,'</h3>')
+    .replace(/<p><ul>/g,'<ul>').replace(/<\/ul><\/p>/g,'</ul>')
+    .replace(/<p><hr><\/p>/g,'<hr>')
+    .replace(/<p><blockquote>/g,'<blockquote>').replace(/<\/blockquote><\/p>/g,'</blockquote>')
+    .replace(/<p><\/p>/g,'');
 }
 
-async function send() {
-  const msg = input.value.trim();
-  if (!msg) return;
-  addMsg('user', msg);
-  input.value = '';
-  btn.disabled = true;
-  status.textContent = '思考中...';
-  try {
-    const r = await fetch('/api/chat', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({message: msg})
-    });
-    const data = await r.json();
-    addMsg('owl', data.reply || data.error || '无回复');
-  } catch(e) {
-    addMsg('owl', '请求失败: ' + e.message);
+function addMsg(role,html,meta){
+  const d=document.createElement('div');d.className='msg '+role;
+  let head='<div class="msg-head">';
+  if(role==='user') head+='你';
+  else{
+    head+='🦉 owl';
+    if(meta?.source) head+=' <span class="source">'+meta.source+'</span>';
+    if(meta?.elapsed) head+='<span class="elapsed">'+meta.elapsed+'</span>';
   }
-  btn.disabled = false;
-  status.textContent = 'Model: """ + MODEL + """ via Ollama';
+  head+='</div>';
+  d.innerHTML=head+'<div class="msg-body">'+(role==='user'?html:md(html))+'</div>';
+  body.appendChild(d);
+  body.scrollTop=body.scrollHeight;
+}
+
+async function ask(msg){input.value=msg;send()}
+
+let loading=null;
+function showLoading(){
+  loading=document.createElement('div');loading.className='msg owl';
+  loading.innerHTML='<div class="msg-head">🦉 owl</div><div class="msg-body" style="color:var(--ink3)">思考中...</div>';
+  body.appendChild(loading);body.scrollTop=body.scrollHeight;
+}
+
+async function send(){
+  const msg=input.value.trim();if(!msg)return;
+  addMsg('user',msg);input.value='';btn.disabled=true;
+  document.querySelectorAll('.preset').forEach(b=>b.disabled=true);
+  showLoading();
+  const t0=Date.now();
+  try{
+    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+    const data=await r.json();
+    if(loading)loading.remove();
+    const elapsed=((Date.now()-t0)/1000).toFixed(1)+'s';
+    document.getElementById('lastElapsed').textContent='last: '+elapsed;
+    const meta={elapsed};
+    if(data.data_source) meta.source='via '+data.data_source;
+    addMsg('owl',data.reply||data.error||'无回复',meta);
+  }catch(e){if(loading)loading.remove();addMsg('owl','请求失败: '+e.message)}
+  btn.disabled=false;
+  document.querySelectorAll('.preset').forEach(b=>b.disabled=false);
   input.focus();
 }
 
-input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+input.addEventListener('keydown',e=>{if(e.key==='Enter')send()});
 </script>
 </body></html>"""
 
