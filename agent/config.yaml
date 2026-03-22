@@ -1,0 +1,30 @@
+# Supply Owl — Hermes Agent Config
+# 双模型路由: 简单任务 → 本地 Ollama, 复杂推理 → 内部 Qwen3-32B
+
+model: "qwen3-32b"
+fallback_model: "ollama/qwen2.5:7b"
+
+smart_model_routing: true
+
+# 本地 Ollama (CPU, 7B)
+# providers:
+#   - name: "local-ollama"
+#     base_url: "http://localhost:11434/v1"
+#     api_key: "ollama"
+#     model: "qwen2.5:7b"
+#
+# 内部 Qwen3-32B (配置后取消注释)
+#   - name: "internal-qwen"
+#     base_url: "http://内部API地址/v1"
+#     api_key: "内部key"
+#     model: "qwen3-32b"
+
+# Heartbeat
+# heartbeat:
+#   - cron: "*/30 * * * *"
+#     skill: supply-monitor
+#     description: "每30分钟异常扫描"
+#   - cron: "0 8 * * *"
+#     skill: supply-scout
+#     args: "--all-active"
+#     description: "每天8:00全量刷新"
