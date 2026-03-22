@@ -1,0 +1,8 @@
+model:
+  default: "qwen3:8b"
+  provider: "main"
+  base_url: "http://localhost:11434/v1"
+  api_key: "ollama"
+
+terminal:
+  command_approval: "smart"
