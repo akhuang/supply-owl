@@ -245,8 +245,8 @@ function md(text){
     .replace(/(<li>.*<\/li>)/s,function(m){return '<ul>'+m+'</ul>'})
     .replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>')
     .replace(/^---$/gm,'<hr>')
-    .replace(/\n\n/g,'</p><p>')
-    .replace(/\n/g,'<br>')
+    .replace(/\\n\\n/g,'</p><p>')
+    .replace(/\\n/g,'<br>')
     .replace(/^/,'<p>').replace(/$/,'</p>')
     .replace(/<p><h3>/g,'<h3>').replace(/<\/h3><\/p>/g,'</h3>')
     .replace(/<p><ul>/g,'<ul>').replace(/<\/ul><\/p>/g,'</ul>')
@@ -270,7 +270,27 @@ function addMsg(role,html,meta){
   body.scrollTop=body.scrollHeight;
 }
 
-async function ask(msg){chatInput.value=msg;send()}
+function ask(msg){
+  addMsg('user',msg);
+  btn.disabled=true;
+  document.querySelectorAll('.preset').forEach(function(b){b.disabled=true});
+  showLoading();
+  var t0=Date.now();
+  fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg}),signal:AbortSignal.timeout(180000)})
+  .then(function(r){return r.json()})
+  .then(function(data){
+    if(loading)loading.remove();
+    var elapsed=((Date.now()-t0)/1000).toFixed(1)+'s';
+    document.getElementById('lastElapsed').textContent='last: '+elapsed;
+    var meta={elapsed:elapsed};
+    if(data.data_source) meta.source='via '+data.data_source;
+    addMsg('owl',data.reply||data.error||'无回复',meta);
+    btn.disabled=false;
+    document.querySelectorAll('.preset').forEach(function(b){b.disabled=false});
+    chatInput.focus();
+  })
+  .catch(function(e){if(loading)loading.remove();addMsg('owl','请求失败: '+e.message);btn.disabled=false;document.querySelectorAll('.preset').forEach(function(b){b.disabled=false})});
+}
 
 let loading=null;
 function showLoading(){
