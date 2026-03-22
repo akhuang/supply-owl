@@ -26,7 +26,7 @@ app.add_middleware(
 
 # ========== Config ==========
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
-MODEL = os.getenv("OWL_MODEL", "qwen3:1.7b")
+MODEL = os.getenv("OWL_MODEL", "qwen3:8b")
 PROJECT_ROOT = Path(__file__).parent.parent
 
 # Load SOUL.md + MEMORY.md as system prompt
