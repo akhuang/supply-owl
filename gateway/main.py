@@ -7,13 +7,18 @@ import json
 import re
 import os
 import subprocess
-import urllib.request
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).parent.parent / ".env")  # NO_PROXY, OPENAI_*
+
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from typing import Optional, List
+
+from hermes.run_agent import AIAgent
 
 app = FastAPI(title="Supply Owl Gateway")
 
@@ -25,42 +30,38 @@ app.add_middleware(
 )
 
 # ========== Config ==========
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
-MODEL = os.getenv("OWL_MODEL", "qwen3:8b")
-PROJECT_ROOT = Path(__file__).parent.parent
+MODEL = os.getenv("OWL_MODEL", "qwen2.5:14b")
+BASE_URL = os.getenv("OPENAI_BASE_URL", "http://localhost:11434/v1")
+API_KEY = os.getenv("OPENAI_API_KEY", "ollama")
 
-# Load SOUL.md + MEMORY.md as system prompt
-def load_system_prompt():
-    parts = []
-    for name in ["SOUL.md", "USER.md", "MEMORY.md"]:
-        p = PROJECT_ROOT / "agent" / name
-        if p.exists():
-            parts.append(p.read_text())
-    return "\n\n---\n\n".join(parts)
+# ========== Hermes AIAgent ==========
+_owl = None
 
-SYSTEM_PROMPT = load_system_prompt()
+def get_owl() -> AIAgent:
+    """Lazy-init Hermes AIAgent (singleton)"""
+    global _owl
+    if _owl is None:
+        _owl = AIAgent(
+            base_url=BASE_URL,
+            api_key=API_KEY,
+            provider="openrouter",
+            api_mode="chat_completions",
+            model=MODEL,
+            max_iterations=10,
+            quiet_mode=True,
+            verbose_logging=False,
+            enabled_toolsets={"memory", "skills"},
+            platform="api",
+        )
+    return _owl
 
-
-# ========== Ollama Client ==========
-def chat(messages, model=MODEL):
-    """Call Ollama native API"""
-    payload = json.dumps({
-        "model": model,
-        "messages": messages,
-        "stream": False,
-        "options": {"num_ctx": 4096}
-    }).encode()
-    req = urllib.request.Request(
-        OLLAMA_URL, data=payload,
-        headers={"Content-Type": "application/json"}
-    )
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        result = json.loads(resp.read())
-    content = result.get("message", {}).get("content", "")
-    # Strip qwen3 thinking tags
-    if "<think>" in content:
-        content = re.sub(r'<think>.*?</think>\s*', '', content, flags=re.DOTALL)
-    return content.strip()
+def chat_with_hermes(user_message: str) -> str:
+    """Run one conversation turn through Hermes AIAgent"""
+    owl = get_owl()
+    result = owl.run_conversation(user_message=user_message)
+    if isinstance(result, dict):
+        return result.get("final_response", str(result))
+    return str(result)
 
 
 # ========== supply-cli ==========
@@ -209,7 +210,7 @@ body{font-family:var(--sans);background:#E8E8E8;color:var(--ink1);-webkit-font-s
 <div class="shell">
 <div class="header">
 <h1>🦉 Supply Owl</h1>
-<span class="sub">""" + MODEL + """ · Ollama</span>
+<span class="sub">""" + MODEL + """ · Hermes Engine</span>
 </div>
 <div class="chat">
 <div class="chat-body" id="chatBody">
@@ -328,7 +329,7 @@ chatInput.addEventListener('keydown',e=>{if(e.key==='Enter')send()});
 
 @app.post("/api/chat")
 async def api_chat(msg: ChatMessage):
-    """对话接口 — 自动检测合同号并查询 supply-cli"""
+    """对话接口 — Hermes AIAgent 引擎 + supply-cli 数据充实"""
     # Auto-enrich: detect contract numbers → query supply-cli
     context = enrich_context(msg.message)
     enriched_contracts = find_contracts(msg.message)
@@ -337,12 +338,8 @@ async def api_chat(msg: ChatMessage):
     if context:
         user_content = f"{msg.message}\n\n---\n以下是系统自动查询到的数据（来自 supply-cli）:\n{context}"
 
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": user_content}
-    ]
     try:
-        reply = chat(messages)
+        reply = chat_with_hermes(user_content)
         return {
             "reply": reply,
             "enriched": enriched_contracts,
