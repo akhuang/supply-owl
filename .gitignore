@@ -28,3 +28,4 @@ Thumbs.db
 # Hermes
 hermes/
 .hermes/state.db
+messages.db

@@ -124,6 +124,7 @@ body { font-family:var(--sans); background:var(--bg); color:var(--ink1); font-si
   transition:all 0.1s;
 }
 .right-btn:hover { background:var(--bg); color:var(--ink1); }
+.right-empty { padding:16px 12px; text-align:center; color:var(--ink4); font-size:11.5px; }
 
 /* ===== Briefing ===== */
 .briefing { padding:10px 12px; font-size:12px; color:var(--ink2); line-height:1.6; }
@@ -179,6 +180,36 @@ body { font-family:var(--sans); background:var(--bg); color:var(--ink1); font-si
 .detail-batch-tag.green { background:var(--green-bg); color:var(--green); }
 .detail-route { padding:5px 12px 8px; font-size:10.5px; color:var(--ink3); font-style:italic; }
 
+/* ===== Draft Panel ===== */
+.draft-overlay { position:fixed; inset:0; z-index:300; display:none; justify-content:center; align-items:center; }
+.draft-overlay.open { display:flex; }
+.draft-backdrop { position:absolute; inset:0; background:rgba(0,0,0,0.18); }
+.draft-panel {
+  position:relative; width:520px; max-height:80vh; background:var(--card);
+  border:1px solid var(--border); border-radius:var(--radius);
+  display:flex; flex-direction:column; overflow:hidden;
+  transform:scale(0.96); opacity:0; transition:all 0.15s ease;
+}
+.draft-overlay.open .draft-panel { transform:scale(1); opacity:1; }
+.draft-header {
+  padding:10px 16px; border-bottom:1px solid var(--border-light);
+  display:flex; align-items:center; gap:8px;
+}
+.draft-title { font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; color:var(--ink2); }
+.draft-role-badge { font-family:var(--mono); font-size:10px; font-weight:700; padding:2px 6px; background:var(--bg); color:var(--ink2); border-radius:2px; }
+.draft-body { flex:1; overflow-y:auto; padding:14px 16px; }
+.draft-textarea {
+  width:100%; min-height:120px; padding:10px 12px; font-family:var(--sans); font-size:12.5px;
+  line-height:1.6; color:var(--ink1); background:var(--bg); border:1px solid var(--border-light);
+  border-radius:var(--radius-sm); resize:vertical; outline:none;
+}
+.draft-textarea:focus { border-color:var(--border); }
+.draft-batch-summary { margin-bottom:10px; font-size:11.5px; color:var(--ink3); }
+.draft-footer {
+  padding:8px 16px; border-top:1px solid var(--border-light);
+  display:flex; justify-content:flex-end; gap:8px;
+}
+
 /* ===== Empty / Loading ===== */
 .empty { padding:40px 20px; text-align:center; color:var(--ink3); font-size:12px; line-height:1.8; }
 .loading { padding:20px; text-align:center; color:var(--ink4); font-family:var(--mono); font-size:11px; letter-spacing:0.5px; }
@@ -229,63 +260,20 @@ body { font-family:var(--sans); background:var(--bg); color:var(--ink1); font-si
       <div class="section">
         <div class="section-header">
           <span class="section-title">等回复</span>
-          <span class="section-count">3</span>
+          <span class="section-count" id="waiting-count">0</span>
           <span class="section-micro">ball in their court</span>
         </div>
-        <div class="right-item">
-          <div class="right-avatar" style="background:#6B7280;">陈</div>
-          <div class="right-body">
-            <div class="right-name">陈七 <span class="right-role">承诺坐席</span></div>
-            <div style="font-size:11px;color:var(--ink3);">已发催承诺 · 2个批次</div>
-          </div>
-          <span class="right-status">WAITING</span>
-          <span class="right-time">10:45</span>
-        </div>
-        <div class="right-item">
-          <div class="right-avatar" style="background:#8B5CF6;">王</div>
-          <div class="right-body">
-            <div class="right-name">王五 <span class="right-role">大调度</span></div>
-            <div style="font-size:11px;color:var(--ink3);">已发提拉请求 · 1个批次</div>
-          </div>
-          <span class="right-status">WAITING</span>
-          <span class="right-time">09:32</span>
-        </div>
-        <div class="right-item">
-          <div class="right-avatar" style="background:#059669;">张</div>
-          <div class="right-body">
-            <div class="right-name">张三 <span class="right-role">供应经理</span></div>
-            <div style="font-size:11px;color:var(--ink3);">已发齐套确认 · 3个批次</div>
-          </div>
-          <span class="right-status">WAITING</span>
-          <span class="right-time">昨天</span>
-        </div>
+        <div id="waiting-body"><div class="right-empty">暂无等回复的消息</div></div>
       </div>
 
       <!-- 收到消息 -->
       <div class="section">
         <div class="section-header">
           <span class="section-title">收到消息</span>
-          <span class="section-count">2</span>
+          <span class="section-count" id="replied-count">0</span>
           <span class="section-micro">ball in your court</span>
         </div>
-        <div class="right-item">
-          <div class="right-avatar incoming" style="background:#D97706;">李</div>
-          <div class="right-body">
-            <div class="right-name">李四 <span class="right-role">承诺坐席</span></div>
-            <div class="right-msg">"HWC0044Q 可以承诺到 03-30"</div>
-          </div>
-          <span class="right-time">14:23</span>
-          <button class="right-btn" onclick="this.textContent='已处理';this.disabled=true;this.style.color='var(--green)'">处理</button>
-        </div>
-        <div class="right-item">
-          <div class="right-avatar incoming" style="background:#2563EB;">赵</div>
-          <div class="right-body">
-            <div class="right-name">赵六 <span class="right-role">大调度</span></div>
-            <div class="right-msg">"提拉已安排，预计04-02到货"</div>
-          </div>
-          <span class="right-time">13:15</span>
-          <button class="right-btn" onclick="this.textContent='已确认';this.disabled=true;this.style.color='var(--green)'">确认</button>
-        </div>
+        <div id="replied-body"><div class="right-empty">暂无收到的消息</div></div>
       </div>
 
       <!-- 今日简报 -->
@@ -323,8 +311,36 @@ body { font-family:var(--sans); background:var(--bg); color:var(--ink1); font-si
   </div>
 </div>
 
+<!-- Draft Preview Panel -->
+<div class="draft-overlay" id="draft-overlay">
+  <div class="draft-backdrop" onclick="closeDraft()"></div>
+  <div class="draft-panel">
+    <div class="draft-header">
+      <span class="draft-title">消息预览</span>
+      <span class="draft-role-badge" id="draft-role"></span>
+    </div>
+    <div class="draft-body">
+      <div class="draft-batch-summary" id="draft-summary"></div>
+      <textarea class="draft-textarea" id="draft-text"></textarea>
+    </div>
+    <div class="draft-footer">
+      <button class="btn secondary" onclick="closeDraft()">取消</button>
+      <button class="btn primary" id="draft-send-btn" onclick="confirmSend()">发送</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let dashboardData = null;
+let pendingDraft = null; // {role, action, contracts, batches}
+
+const ROLE_COLORS = {
+  '承诺坐席': '#6B7280',
+  '大调度': '#8B5CF6',
+  '提拉座席': '#2563EB',
+};
+
+// ===== Load =====
 
 async function loadDashboard() {
   try {
@@ -338,6 +354,23 @@ async function loadDashboard() {
   }
 }
 
+async function loadMessages() {
+  try {
+    const [wRes, rRes] = await Promise.all([
+      fetch('/api/messages?status=waiting'),
+      fetch('/api/messages?status=replied'),
+    ]);
+    const waiting = await wRes.json();
+    const replied = await rRes.json();
+    renderWaiting(waiting);
+    renderReplied(replied);
+  } catch (e) {
+    // silent
+  }
+}
+
+// ===== Stats =====
+
 function renderStats(s) {
   document.getElementById('count-red').textContent = s.red;
   document.getElementById('count-yellow').textContent = s.yellow;
@@ -350,9 +383,11 @@ function renderBriefing(s) {
   document.getElementById('brief-green').textContent = s.green + ' green';
   const total = s.red + s.yellow + s.green;
   document.getElementById('brief-note').textContent = total > 0
-    ? '共 ' + total + ' 个批次需关注，其中 ' + s.red + ' 个未承诺需优先处理。'
+    ? '共 ' + total + ' 个合同需关注，其中 ' + s.red + ' 个未承诺需优先处理。'
     : '所有合同履行状态正常，无需处理。';
 }
+
+// ===== Alerts =====
 
 function renderAlerts(groups) {
   const body = document.getElementById('alert-body');
@@ -365,6 +400,8 @@ function renderAlerts(groups) {
   let html = '';
   for (const g of groups) {
     totalBatches += g.total_batches;
+    // serialize group data for button onclick
+    const gIdx = '_g' + Math.random().toString(36).slice(2, 8);
     html += '<div class="alert-group" data-role="' + esc(g.role) + '">';
     html += '<div class="group-header">';
     html += '<span class="group-role">' + esc(g.role) + '</span>';
@@ -402,16 +439,17 @@ function renderAlerts(groups) {
       }
       html += '</div>';
     }
+    // Action buttons — store group data in window for onclick
+    const dataKey = '_grp_' + gIdx;
+    window[dataKey] = g;
     html += '<div class="group-actions">';
-    const bid = 'btn-' + Math.random().toString(36).slice(2, 8);
     if (g.role === '承诺坐席') {
-      html += '<button class="btn primary" id="' + bid + '" onclick="flashBtn(\'' + bid + '\',\'催承诺\')">催承诺(' + g.total_batches + ')</button>';
+      html += '<button class="btn primary" onclick="openDraft(window.' + dataKey + ',\'催承诺\')">催承诺(' + g.total_batches + ')</button>';
     } else if (g.role === '大调度') {
-      const bid2 = 'btn-' + Math.random().toString(36).slice(2, 8);
-      html += '<button class="btn primary" id="' + bid + '" onclick="flashBtn(\'' + bid + '\',\'批量提拉\')">批量提拉(' + g.total_batches + ')</button>';
-      html += '<button class="btn secondary" id="' + bid2 + '" onclick="flashBtn(\'' + bid2 + '\',\'生成邮件\')">生成提拉邮件</button>';
+      html += '<button class="btn primary" onclick="openDraft(window.' + dataKey + ',\'批量提拉\')">批量提拉(' + g.total_batches + ')</button>';
+      html += '<button class="btn secondary" onclick="openDraft(window.' + dataKey + ',\'生成提拉邮件\')">生成提拉邮件</button>';
     } else {
-      html += '<button class="btn primary" id="' + bid + '" onclick="flashBtn(\'' + bid + '\',\'已发送\')">找' + esc(g.role) + '(' + g.total_batches + ')</button>';
+      html += '<button class="btn primary" onclick="openDraft(window.' + dataKey + ',\'找' + esc(g.role) + '\')">找' + esc(g.role) + '(' + g.total_batches + ')</button>';
     }
     html += '</div>';
     html += '</div>';
@@ -420,7 +458,153 @@ function renderAlerts(groups) {
   document.getElementById('alert-count').textContent = totalBatches + ' 批次';
 }
 
-/* ===== Detail Panel ===== */
+// ===== Right Column: Waiting =====
+
+function renderWaiting(messages) {
+  const body = document.getElementById('waiting-body');
+  document.getElementById('waiting-count').textContent = messages.length;
+  if (messages.length === 0) {
+    body.innerHTML = '<div class="right-empty">暂无等回复的消息</div>';
+    return;
+  }
+  let html = '';
+  for (const m of messages) {
+    const color = ROLE_COLORS[m.role] || '#6B7280';
+    const initial = m.role.charAt(0);
+    const batchCount = m.batches.length;
+    const time = formatTime(m.created_at);
+    html += '<div class="right-item">';
+    html += '<div class="right-avatar" style="background:' + color + ';">' + esc(initial) + '</div>';
+    html += '<div class="right-body">';
+    html += '<div class="right-name">' + esc(m.role) + '</div>';
+    html += '<div style="font-size:11px;color:var(--ink3);">已发' + esc(m.action) + ' · ' + batchCount + '个批次 · ' + m.contracts.length + '个合同</div>';
+    html += '</div>';
+    html += '<span class="right-status">WAITING</span>';
+    html += '<span class="right-time">' + esc(time) + '</span>';
+    html += '</div>';
+  }
+  body.innerHTML = html;
+}
+
+// ===== Right Column: Replied =====
+
+function renderReplied(messages) {
+  const body = document.getElementById('replied-body');
+  document.getElementById('replied-count').textContent = messages.length;
+  if (messages.length === 0) {
+    body.innerHTML = '<div class="right-empty">暂无收到的消息</div>';
+    return;
+  }
+  let html = '';
+  for (const m of messages) {
+    const color = ROLE_COLORS[m.role] || '#D97706';
+    const initial = m.role.charAt(0);
+    const time = formatTime(m.updated_at);
+    html += '<div class="right-item">';
+    html += '<div class="right-avatar incoming" style="background:' + color + ';">' + esc(initial) + '</div>';
+    html += '<div class="right-body">';
+    html += '<div class="right-name">' + esc(m.role) + '</div>';
+    html += '<div class="right-msg">' + esc(m.reply_text || '') + '</div>';
+    html += '</div>';
+    html += '<span class="right-time">' + esc(time) + '</span>';
+    html += '<button class="right-btn" onclick="processMessage(' + m.id + ',this)">处理</button>';
+    html += '</div>';
+  }
+  body.innerHTML = html;
+}
+
+async function processMessage(id, btn) {
+  btn.textContent = '...';
+  btn.disabled = true;
+  await fetch('/api/messages/' + id, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({status: 'processed'}),
+  });
+  loadMessages();
+}
+
+// ===== Draft Panel =====
+
+async function openDraft(group, action) {
+  // Collect all batches with contract info
+  const allBatches = [];
+  const contractNos = [];
+  for (const c of group.contracts) {
+    contractNos.push(c.contract);
+    for (const b of c.batches) {
+      allBatches.push({...b, contract: c.contract});
+    }
+  }
+
+  pendingDraft = {
+    role: group.role,
+    action: action,
+    contracts: contractNos,
+    batches: allBatches,
+  };
+
+  document.getElementById('draft-role').textContent = group.role;
+  document.getElementById('draft-summary').textContent = action + ' · ' + allBatches.length + ' 批次 · ' + contractNos.length + ' 合同';
+  document.getElementById('draft-text').value = '生成中...';
+  document.getElementById('draft-send-btn').disabled = true;
+  document.getElementById('draft-overlay').classList.add('open');
+
+  // Call API to generate draft
+  try {
+    const r = await fetch('/api/draft', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        role: group.role,
+        contracts: group.contracts,
+        batches: allBatches,
+      }),
+    });
+    const data = await r.json();
+    document.getElementById('draft-text').value = data.draft;
+    document.getElementById('draft-send-btn').disabled = false;
+  } catch (e) {
+    document.getElementById('draft-text').value = '草稿生成失败: ' + e.message;
+  }
+}
+
+function closeDraft() {
+  document.getElementById('draft-overlay').classList.remove('open');
+  pendingDraft = null;
+}
+
+async function confirmSend() {
+  if (!pendingDraft) return;
+  const btn = document.getElementById('draft-send-btn');
+  btn.textContent = '发送中...';
+  btn.disabled = true;
+
+  const draftText = document.getElementById('draft-text').value;
+  try {
+    await fetch('/api/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        role: pendingDraft.role,
+        action: pendingDraft.action,
+        contracts: pendingDraft.contracts,
+        batches: pendingDraft.batches,
+        draft_text: draftText,
+      }),
+    });
+    closeDraft();
+    btn.textContent = '发送';
+    btn.disabled = false;
+    loadMessages();
+  } catch (e) {
+    btn.textContent = '发送失败';
+    setTimeout(() => { btn.textContent = '发送'; btn.disabled = false; }, 1500);
+  }
+}
+
+// ===== Detail Panel =====
+
 async function openDetail(contractId) {
   const overlay = document.getElementById('detail-overlay');
   document.getElementById('detail-id').textContent = contractId;
@@ -441,7 +625,6 @@ function renderDetail(data) {
   const c = data.contract || data;
   document.getElementById('detail-id').textContent = c.contract || c.contract_id || '';
   document.getElementById('detail-meta').textContent = (c.project || '') + (c.customer ? ' · ' + c.customer : '');
-  // Temperature dot
   const temp = document.getElementById('detail-temp');
   const worstStatus = getWorstStatus(c.batches || []);
   temp.className = 'detail-temp ' + worstStatus;
@@ -451,10 +634,9 @@ function renderDetail(data) {
     document.getElementById('detail-body').innerHTML = '<div class="empty">无批次数据</div>';
     return;
   }
-  // Group batches by contact_role
   const roleGroups = {};
   for (const b of batches) {
-    const role = b.contact_role || '未分配';
+    const role = b.contact_role || '满足';
     if (!roleGroups[role]) roleGroups[role] = [];
     roleGroups[role].push(b);
   }
@@ -498,24 +680,9 @@ function closeDetail() {
   document.getElementById('detail-overlay').classList.remove('open');
 }
 
-/* ===== Button Flash ===== */
-function flashBtn(id, label) {
-  const btn = document.getElementById(id);
-  if (!btn) return;
-  const orig = btn.textContent;
-  btn.textContent = '已发送 ✓';
-  btn.classList.remove('primary', 'secondary');
-  btn.classList.add('sent');
-  setTimeout(() => {
-    btn.textContent = orig;
-    btn.classList.remove('sent');
-    btn.classList.add('primary');
-  }, 1500);
-}
+// ===== Stat Click =====
 
-/* ===== Stat Click → Highlight Groups ===== */
 function flashGroups(status) {
-  const statMap = { uncommitted: 'red', not_met: 'yellow', met: 'green' };
   const items = document.querySelectorAll('.stat-item');
   items.forEach(el => { if (el.dataset.status === status) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); } });
   document.querySelectorAll('.alert-group').forEach(el => {
@@ -525,18 +692,42 @@ function flashGroups(status) {
   });
 }
 
-/* ===== Keyboard ===== */
+// ===== Keyboard =====
+
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeDetail();
+  if (e.key === 'Escape') {
+    if (document.getElementById('draft-overlay').classList.contains('open')) {
+      closeDraft();
+    } else {
+      closeDetail();
+    }
+  }
 });
 
-/* ===== Escape HTML ===== */
+// ===== Helpers =====
+
+function formatTime(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr.replace(' ', 'T'));
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) {
+    return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+  }
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return '昨天';
+  return (d.getMonth() + 1) + '/' + d.getDate();
+}
+
 function esc(s) {
   if (s == null) return '';
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// ===== Init =====
+
 loadDashboard();
+loadMessages();
 </script>
 </body>
 </html>

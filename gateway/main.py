@@ -6,6 +6,7 @@ Supply Owl — API Gateway
 import json
 import re
 import os
+import sqlite3
 import subprocess
 from pathlib import Path
 from datetime import datetime
@@ -31,6 +32,38 @@ app.add_middleware(
 
 # Serve static files (dashboard HTML)
 STATIC_DIR = Path(__file__).parent / "static"
+
+
+# ========== SQLite 消息状态 ==========
+DB_PATH = Path(__file__).parent / "messages.db"
+
+def _get_db():
+    conn = sqlite3.connect(str(DB_PATH))
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    return conn
+
+def _init_db():
+    conn = _get_db()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            role TEXT NOT NULL,
+            action TEXT NOT NULL,
+            contracts TEXT NOT NULL,
+            batches TEXT NOT NULL,
+            draft_text TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'waiting',
+            reply_text TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+_init_db()
+
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
@@ -212,12 +245,54 @@ def build_dashboard() -> dict:
     }
 
 
+# ========== 草稿生成 ==========
+
+DRAFT_TEMPLATES = {
+    "承诺坐席": "请协助确认以下批次的承诺日期：\n{batch_lines}\n请尽快回复承诺时间，谢谢。",
+    "大调度": "以下批次CPD不满足RPD，需要提拉：\n{batch_lines}\n请协调资源，目标拉到RPD之前。",
+    "提拉座席": "以下批次需要提拉处理：\n{batch_lines}\n请安排提拉，谢谢。",
+}
+
+def generate_draft(role: str, contracts: list, batches: list) -> str:
+    lines = []
+    for b in batches:
+        contract = b.get("contract", "")
+        batch_id = b.get("batch", "")
+        rpd = b.get("rpd", "")
+        cpd = b.get("cpd", "未承诺")
+        if role == "承诺坐席":
+            lines.append(f"  - {contract} / {batch_id}，RPD {rpd}，当前未承诺")
+        else:
+            lines.append(f"  - {contract} / {batch_id}，RPD {rpd}，CPD {cpd}")
+    template = DRAFT_TEMPLATES.get(role, DRAFT_TEMPLATES["提拉座席"])
+    return template.format(batch_lines="\n".join(lines))
+
+
 # ========== Models ==========
+
 class Fragment(BaseModel):
     contract: str
     source: str
     context: Optional[str] = None
     sender: Optional[str] = None
+
+class DraftRequest(BaseModel):
+    role: str
+    contracts: List[dict]
+    batches: List[dict]
+
+class SendRequest(BaseModel):
+    role: str
+    action: str
+    contracts: List[str]
+    batches: List[dict]
+    draft_text: str
+
+class ReplyRequest(BaseModel):
+    reply_text: str
+
+class MessageStatusUpdate(BaseModel):
+    status: str
 
 
 # ========== Routes ==========
@@ -245,3 +320,75 @@ async def receive_fragment(fragment: Fragment):
     """接收 ClipQ 碎片推送"""
     # TODO: 触发 analyze_contract + 更新仪表盘
     return {"received": True, "contract": fragment.contract}
+
+
+# ========== 消息 API ==========
+
+@app.post("/api/draft")
+def create_draft(req: DraftRequest):
+    """生成草稿文本"""
+    text = generate_draft(req.role, req.contracts, req.batches)
+    return {"draft": text}
+
+@app.post("/api/messages")
+def send_message(req: SendRequest):
+    """发送消息 → 状态变为 waiting"""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = _get_db()
+    cur = conn.execute(
+        """INSERT INTO messages (role, action, contracts, batches, draft_text, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, 'waiting', ?, ?)""",
+        (req.role, req.action, json.dumps(req.contracts), json.dumps(req.batches),
+         req.draft_text, now, now)
+    )
+    msg_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return {"id": msg_id, "status": "waiting"}
+
+@app.get("/api/messages")
+def list_messages(status: Optional[str] = None):
+    """列出消息 — 可按 status 过滤 (waiting / replied / processed)"""
+    conn = _get_db()
+    if status:
+        rows = conn.execute(
+            "SELECT * FROM messages WHERE status = ? ORDER BY updated_at DESC", (status,)
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM messages ORDER BY updated_at DESC"
+        ).fetchall()
+    conn.close()
+    return [_row_to_dict(r) for r in rows]
+
+@app.put("/api/messages/{msg_id}")
+def update_message(msg_id: int, req: MessageStatusUpdate):
+    """更新消息状态"""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = _get_db()
+    conn.execute(
+        "UPDATE messages SET status = ?, updated_at = ? WHERE id = ?",
+        (req.status, now, msg_id)
+    )
+    conn.commit()
+    conn.close()
+    return {"id": msg_id, "status": req.status}
+
+@app.put("/api/messages/{msg_id}/reply")
+def reply_message(msg_id: int, req: ReplyRequest):
+    """收到回复 — 状态变为 replied"""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = _get_db()
+    conn.execute(
+        "UPDATE messages SET status = 'replied', reply_text = ?, updated_at = ? WHERE id = ?",
+        (req.reply_text, now, msg_id)
+    )
+    conn.commit()
+    conn.close()
+    return {"id": msg_id, "status": "replied"}
+
+def _row_to_dict(row):
+    d = dict(row)
+    d["contracts"] = json.loads(d["contracts"])
+    d["batches"] = json.loads(d["batches"])
+    return d
