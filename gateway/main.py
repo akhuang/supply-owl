@@ -63,6 +63,26 @@ def chat_with_hermes(user_message: str) -> str:
         return result.get("final_response", str(result))
     return str(result)
 
+def chat_focused(system: str, user: str) -> str:
+    """聚焦小 prompt，不走 Hermes 大 system prompt"""
+    import urllib.request
+    payload = json.dumps({
+        "model": MODEL,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user}
+        ],
+        "stream": False,
+        "options": {"num_ctx": 4096}
+    }).encode()
+    req = urllib.request.Request(
+        os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat"),
+        data=payload, headers={"Content-Type": "application/json"}
+    )
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        result = json.loads(resp.read())
+    return result.get("message", {}).get("content", "").strip()
+
 
 # ========== supply-cli ==========
 CONTRACT_RE = re.compile(r'\b(1Y0[A-Za-z0-9]{11}|00E[A-Za-z0-9]{11})\b')
@@ -89,60 +109,112 @@ def supply_cli(cmd: str, *args) -> dict:
     except Exception as e:
         return {"error": str(e)}
 
-def enrich_context(user_message: str) -> str:
-    """Detect contract numbers in message, auto-query supply-cli, return enriched context"""
-    contracts = find_contracts(user_message)
-    if not contracts:
-        return ""
-
-    parts = []
-    for cno in contracts[:5]:  # max 5 contracts per query
-        data = supply_cli("detail", cno)
-        if data.get("found"):
-            batches_info = []
-            for b in data.get("batches", []):
-                cpd = b.get("cpd") or "未承诺"
-                rpd = b.get("rpd") or "无"
-                apd = b.get("apd") or "未交单"
-                status = b.get("demandStatus", "")
-                urgent = "急单" if b.get("urgentFlag") == "Y" else ""
-                batch_no = b.get("batchNo", "?")
-
-                # CPD vs RPD judgment
-                if cpd == "未承诺":
-                    risk = "CPD未承诺"
-                elif cpd > rpd and rpd != "无":
-                    risk = f"CPD不满足RPD(差{_days_diff(rpd, cpd)}天)"
-                else:
-                    risk = "CPD满足RPD"
-
-                line = f"  {batch_no}: CPD={cpd} RPD={rpd} APD={apd} {risk} {urgent} {status}".strip()
-                batches_info.append(line)
-
-            parts.append(
-                f"合同 {cno} ({data.get('projectName','')}/{data.get('customer','')}):\n"
-                + "\n".join(batches_info)
-            )
-        else:
-            parts.append(f"合同 {cno}: 未找到数据")
-
-    # Also check anomalies
-    for cno in contracts[:3]:
-        anomaly = supply_cli("anomalies", cno)
-        if anomaly.get("anomalies"):
-            parts.append(f"合同 {cno} 异常: {json.dumps(anomaly['anomalies'], ensure_ascii=False)}")
-
-    return "\n\n".join(parts)
-
-def _days_diff(date1: str, date2: str) -> int:
-    """Simple date diff in days"""
+def _days_diff(d1: str, d2: str) -> int:
     try:
         from datetime import datetime
-        d1 = datetime.strptime(date1, "%Y-%m-%d")
-        d2 = datetime.strptime(date2, "%Y-%m-%d")
-        return abs((d2 - d1).days)
+        return abs((datetime.strptime(d2, "%Y-%m-%d") - datetime.strptime(d1, "%Y-%m-%d")).days)
     except:
         return 0
+
+def analyze_contract(contract_no: str) -> dict:
+    """代码做所有判断，返回结构化结论"""
+    data = supply_cli("detail", contract_no)
+    if not data.get("found"):
+        return {"contract": contract_no, "found": False}
+
+    result = {
+        "contract": contract_no,
+        "found": True,
+        "project": data.get("projectName", ""),
+        "customer": data.get("customer", ""),
+        "batches": [],
+        "summary": "",
+        "actions": [],
+    }
+
+    for b in data.get("batches", []):
+        batch_no = b.get("batchNo", "?")
+        cpd = b.get("cpd")
+        rpd = b.get("rpd", "")
+        apd = b.get("apd")
+        urgent = b.get("urgentFlag") == "Y"
+        kit = b.get("kitStatus", "")
+        related = b.get("relatedContractNo")
+
+        # --- 代码判断: CPD vs RPD ---
+        if not cpd:
+            status = "未承诺"
+            conclusion = f"{batch_no} 还没承诺"
+            # 未承诺不主动盯，等供应经理催
+        elif cpd > rpd and rpd:
+            gap = _days_diff(rpd, cpd)
+            status = f"CPD不满足RPD"
+            conclusion = f"{batch_no} CPD {cpd} 比 RPD {rpd} 晚 {gap} 天"
+
+            # --- 代码判断: 找谁 ---
+            if batch_no.startswith("HWA"):
+                conclusion += f"，找大调度提拉（直接用 {contract_no}）"
+                result["actions"].append(f"找大调度提拉 {batch_no}（HWA开头，用1Y0合同）")
+            elif related:
+                conclusion += f"，找大调度提拉（用关联合同 {related}）"
+                result["actions"].append(f"找大调度提拉 {batch_no}（用 {related}）")
+            else:
+                conclusion += "，找提拉座席提拉"
+                result["actions"].append(f"找提拉座席提拉 {batch_no}")
+        else:
+            status = "CPD满足RPD"
+            conclusion = f"{batch_no} 正常，CPD {cpd} 满足 RPD {rpd}"
+
+        if urgent:
+            conclusion += "（急单）"
+        if kit == "欠料":
+            conclusion += "（欠料）"
+
+        result["batches"].append({
+            "batch": batch_no, "cpd": cpd or "无", "rpd": rpd,
+            "status": status, "conclusion": conclusion
+        })
+
+    # --- 整体总结 ---
+    uncommitted = [b for b in result["batches"] if b["status"] == "未承诺"]
+    not_met = [b for b in result["batches"] if b["status"] == "CPD不满足RPD"]
+    ok = [b for b in result["batches"] if b["status"] == "CPD满足RPD"]
+
+    parts = []
+    if uncommitted:
+        names = "、".join(b["batch"] for b in uncommitted)
+        parts.append(f"{names} 还没承诺，目前没人催，暂时不用管")
+    if not_met:
+        names = "、".join(b["batch"] for b in not_met)
+        parts.append(f"{names} 需要提拉")
+    if ok:
+        names = "、".join(b["batch"] for b in ok)
+        parts.append(f"{names} 正常")
+    result["summary"] = "；".join(parts) + "。"
+
+    return result
+
+def analyze_message(user_message: str) -> dict:
+    """分析用户消息，返回结构化结论"""
+    contracts = find_contracts(user_message)
+    if not contracts:
+        return {"has_contracts": False}
+
+    analyses = [analyze_contract(c) for c in contracts[:5]]
+    return {"has_contracts": True, "analyses": analyses}
+
+# 聚焦 prompt — 模型只负责润色
+POLISHER_PROMPT = """你是 Owl，用户的供应链工作搭档。像同事一样说话，简短直接。
+
+用户问了一个问题，系统已经查好了数据并做出了判断。你的任务是把下面的结论用自然的方式告诉用户。
+
+要求：
+- 直接说结论，不要重复分析过程
+- 不要说"根据系统分析"之类的话
+- 用合同号和批次号说话
+- 如果有建议的行动，自然地提出来
+- 不要暴露内部术语（不说温度、Axiom、规则等）
+- 简短，不超过3-4句话"""
 
 
 # ========== Models ==========
@@ -329,24 +401,42 @@ chatInput.addEventListener('keydown',e=>{if(e.key==='Enter')send()});
 
 @app.post("/api/chat")
 async def api_chat(msg: ChatMessage):
-    """对话接口 — Hermes AIAgent 引擎 + supply-cli 数据充实"""
-    # Auto-enrich: detect contract numbers → query supply-cli
-    context = enrich_context(msg.message)
-    enriched_contracts = find_contracts(msg.message)
+    """对话接口 — 代码判断 + 模型润色"""
+    analysis = analyze_message(msg.message)
 
-    user_content = msg.message
-    if context:
-        user_content = f"{msg.message}\n\n---\n以下是系统自动查询到的数据（来自 supply-cli）:\n{context}"
+    if analysis.get("has_contracts"):
+        # 有合同号 → 代码已做完判断 → 模型只润色
+        conclusions = []
+        for a in analysis["analyses"]:
+            if not a["found"]:
+                conclusions.append(f"合同 {a['contract']} 没找到数据。")
+                continue
+            conclusions.append(f"合同 {a['contract']}（{a['project']}/{a['customer']}）：")
+            for b in a["batches"]:
+                conclusions.append(f"  - {b['conclusion']}")
+            if a["actions"]:
+                conclusions.append("建议行动：" + "；".join(a["actions"]))
 
-    try:
-        reply = chat_with_hermes(user_content)
-        return {
-            "reply": reply,
-            "enriched": enriched_contracts,
-            "data_source": "supply-cli" if context else None
-        }
-    except Exception as e:
-        return {"error": str(e)}
+        structured = "\n".join(conclusions)
+        prompt = f"用户问：{msg.message}\n\n系统判断结果：\n{structured}\n\n请用自然的方式告诉用户。"
+
+        try:
+            reply = chat_focused(POLISHER_PROMPT, prompt)
+            return {
+                "reply": reply,
+                "enriched": [a["contract"] for a in analysis["analyses"]],
+                "data_source": "supply-cli"
+            }
+        except Exception as e:
+            # 模型挂了就直接返回结构化结论
+            return {"reply": structured, "data_source": "supply-cli (raw)"}
+    else:
+        # 没合同号 → 普通对话，走 Hermes
+        try:
+            reply = chat_with_hermes(msg.message)
+            return {"reply": reply}
+        except Exception as e:
+            return {"error": str(e)}
 
 
 @app.get("/api/health")
