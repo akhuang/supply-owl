@@ -14,204 +14,529 @@
   --red: #D32F2F; --red-bg: #FDECEA;
   --yellow: #C17D10; --yellow-bg: #FDF4E4;
   --green: #1F8B4C; --green-bg: #E8F5EC;
+  --blue: #2563EB; --blue-bg: #EFF4FF;
+  --radius: 3px; --radius-sm: 2px;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:var(--sans); background:var(--bg); color:var(--ink1); font-size:13px; }
+body { font-family:var(--sans); background:var(--bg); color:var(--ink1); font-size:13px; line-height:1.4; height:100vh; overflow:hidden; display:flex; flex-direction:column; -webkit-font-smoothing:antialiased; }
 
-/* Layout */
+/* ===== Topbar ===== */
 .topbar {
   height:48px; background:var(--card); border-bottom:1px solid var(--border);
-  display:flex; align-items:center; padding:0 20px; gap:12px;
+  display:flex; align-items:center; padding:0 20px; gap:12px; flex-shrink:0;
 }
+.topbar-owl { display:flex; align-items:center; }
 .topbar-title { font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; color:var(--ink2); }
 .topbar-spacer { flex:1; }
-.stat { display:flex; align-items:center; gap:4px; font-family:var(--mono); font-size:13px; font-weight:700; padding:3px 8px; cursor:default; }
-.stat .dot { width:6px; height:6px; border-radius:1px; }
-.dot.red { background:var(--red); } .dot.yellow { background:var(--yellow); } .dot.green { background:var(--green); }
+.topbar-stats { display:flex; gap:10px; font-family:var(--mono); font-size:13px; font-weight:700; }
+.stat-item {
+  display:flex; align-items:center; gap:4px; padding:3px 8px; cursor:pointer;
+  border-radius:var(--radius-sm); transition:background 0.12s; user-select:none;
+}
+.stat-item:hover { background:var(--bg); }
+.stat-item.flash { animation:stat-flash 0.6s ease; }
+@keyframes stat-flash { 0%,100%{background:transparent;} 30%{background:var(--yellow-bg);} }
+.stat-dot { width:6px; height:6px; border-radius:1px; }
+.stat-dot.red { background:var(--red); } .stat-dot.yellow { background:var(--yellow); } .stat-dot.green { background:var(--green); }
 
-.content { padding:16px 20px; max-width:1200px; margin:0 auto; }
+/* ===== Content Layout ===== */
+.content { flex:1; overflow-y:auto; padding:16px 20px 60px; }
+.content::-webkit-scrollbar { width:5px; }
+.content::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+.dashboard { display:grid; grid-template-columns:1fr 340px; gap:16px; max-width:1400px; }
+.left-col { display:flex; flex-direction:column; gap:16px; }
+.right-col { display:flex; flex-direction:column; gap:16px; }
 
-/* Section */
-.section { background:var(--card); border:1px solid var(--border); border-radius:2px; margin-bottom:16px; }
+/* ===== Section ===== */
+.section { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); }
 .section-header {
-  padding:8px 14px; display:flex; align-items:center; gap:8px;
+  padding:8px 14px 7px; display:flex; align-items:center; gap:7px;
   border-bottom:1px solid var(--border-light);
 }
-.section-title { font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--ink3); }
+.section-title { font-family:var(--mono); font-size:10.5px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--ink3); }
 .section-count { font-family:var(--mono); font-size:10px; font-weight:700; color:var(--ink4); background:var(--bg); padding:1px 6px; border-radius:2px; }
-.section-micro { font-family:var(--mono); font-size:9px; color:var(--ink4); margin-left:auto; letter-spacing:0.05em; }
+.section-micro { font-family:var(--mono); font-size:9px; color:var(--ink4); margin-left:auto; letter-spacing:0.05em; text-transform:uppercase; opacity:0.7; }
 
-/* Alert Group */
+/* ===== Alert Group ===== */
 .alert-group { border-bottom:1px solid var(--border); }
 .alert-group:last-child { border-bottom:none; }
-.group-header { padding:10px 14px; display:flex; align-items:center; gap:8px; }
+.alert-group.highlight { animation:group-highlight 1.2s ease; }
+@keyframes group-highlight { 0%,100%{background:transparent;} 20%{background:var(--yellow-bg);} }
+.group-header { padding:8px 14px 6px; display:flex; align-items:center; gap:8px; }
 .group-role { font-family:var(--mono); font-size:10px; font-weight:700; padding:2px 6px; background:var(--bg); color:var(--ink2); border-radius:2px; }
 .group-count { font-size:11px; color:var(--ink3); }
 
-/* Contract block */
+/* ===== Contract Block ===== */
 .contract-block {
-  margin:4px 10px 6px; padding:8px 10px; background:var(--bg);
-  border:1px solid var(--border-light); border-radius:2px; cursor:pointer;
+  margin:4px 10px 6px; padding:7px 10px; background:var(--bg);
+  border:1px solid var(--border-light); border-radius:var(--radius-sm); cursor:pointer;
   transition:background 0.1s;
 }
 .contract-block:hover { background:var(--border-light); border-color:var(--border); }
-.contract-header { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
-.contract-id { font-family:var(--mono); font-size:12px; font-weight:600; }
+.contract-header { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
+.contract-id { font-family:var(--mono); font-size:11.5px; font-weight:600; letter-spacing:-0.3px; }
 .contract-meta { font-size:11px; color:var(--ink3); }
-
-/* Batch row */
+.batch-list { display:flex; flex-direction:column; gap:1px; }
 .batch-row { display:flex; align-items:center; gap:8px; padding:2px 0; font-size:12px; }
 .batch-id { font-family:var(--mono); font-size:11px; font-weight:500; width:80px; flex-shrink:0; }
-.batch-info { flex:1; color:var(--ink2); font-size:11px; }
-.batch-status { font-family:var(--mono); font-size:10px; font-weight:700; padding:1px 5px; border-radius:2px; }
+.batch-info { flex:1; color:var(--ink2); font-size:11.5px; }
+.batch-status { font-family:var(--mono); font-size:10px; font-weight:600; padding:1px 5px; border-radius:2px; }
 .batch-status.uncommitted { background:var(--red-bg); color:var(--red); }
 .batch-status.not_met { background:var(--yellow-bg); color:var(--yellow); }
 .batch-status.met { background:var(--green-bg); color:var(--green); }
+.batch-dot { width:6px; height:6px; border-radius:1px; flex-shrink:0; }
+.batch-dot.uncommitted { background:var(--red); } .batch-dot.not_met { background:var(--yellow); } .batch-dot.met { background:var(--green); }
+.route-hint { font-size:10.5px; color:var(--ink3); margin-top:3px; font-style:italic; }
 
-/* Routing hint */
-.route-hint { font-size:10px; color:var(--yellow); font-style:italic; padding:2px 14px 6px; }
-
-/* Actions */
-.group-actions { padding:4px 14px 10px; display:flex; gap:6px; flex-wrap:wrap; }
+/* ===== Group Actions ===== */
+.group-actions { padding:4px 14px 8px; display:flex; gap:6px; flex-wrap:wrap; }
 .btn {
   font-family:var(--sans); font-size:11px; font-weight:600; padding:4px 10px;
-  border:none; border-radius:2px; cursor:pointer; transition:all 0.1s;
+  border:none; border-radius:var(--radius-sm); cursor:pointer; transition:all 0.12s; letter-spacing:0.2px;
 }
 .btn.primary { background:var(--ink1); color:#FFF; }
 .btn.primary:hover { background:#333; }
 .btn.secondary { background:var(--bg); color:var(--ink2); border:1px solid var(--border); }
 .btn.secondary:hover { background:var(--border-light); color:var(--ink1); }
+.btn.sent { background:var(--green-bg); color:var(--green); cursor:default; pointer-events:none; }
 
-/* Empty state */
+/* ===== Right Column Items ===== */
+.right-item {
+  padding:8px 12px; display:flex; align-items:center; gap:9px;
+  border-bottom:1px solid var(--border-light); transition:background 0.15s;
+}
+.right-item:last-child { border-bottom:none; }
+.right-avatar {
+  width:28px; height:28px; border-radius:var(--radius-sm);
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:700; color:#FFF; flex-shrink:0;
+}
+.right-avatar.incoming { border:2px solid var(--yellow); }
+.right-body { flex:1; min-width:0; }
+.right-name { font-size:12px; font-weight:600; }
+.right-role { font-size:10.5px; color:var(--ink3); }
+.right-msg { font-size:11.5px; color:var(--ink2); font-style:italic; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.right-time { font-size:10px; font-family:var(--mono); color:var(--ink4); flex-shrink:0; }
+.right-status { font-size:9px; font-family:var(--mono); font-weight:700; color:var(--blue); background:var(--blue-bg); padding:2px 6px; border-radius:2px; flex-shrink:0; letter-spacing:0.03em; }
+.right-btn {
+  font-size:10.5px; font-weight:600; padding:3px 8px; border-radius:var(--radius-sm);
+  border:1px solid var(--border); background:var(--card); color:var(--ink2); cursor:pointer; flex-shrink:0;
+  transition:all 0.1s;
+}
+.right-btn:hover { background:var(--bg); color:var(--ink1); }
+
+/* ===== Briefing ===== */
+.briefing { padding:10px 12px; font-size:12px; color:var(--ink2); line-height:1.6; }
+.briefing-stats { display:flex; gap:14px; margin-bottom:6px; font-family:var(--mono); font-size:12px; font-weight:600; }
+.briefing-stats .red { color:var(--red); } .briefing-stats .yellow { color:var(--yellow); } .briefing-stats .green { color:var(--green); }
+.briefing-note { font-size:11.5px; color:var(--ink3); line-height:1.6; }
+
+/* ===== Detail Panel ===== */
+.detail-overlay { position:fixed; inset:0; z-index:200; display:none; }
+.detail-overlay.open { display:flex; }
+.detail-backdrop { flex:1; background:rgba(0,0,0,0.12); }
+.detail-panel {
+  width:620px; background:var(--card); border-left:1px solid var(--border);
+  display:flex; flex-direction:column; overflow:hidden;
+  transform:translateX(100%); transition:transform 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+.detail-overlay.open .detail-panel { transform:translateX(0); }
+.detail-header {
+  padding:12px 16px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:10px;
+}
+.detail-close {
+  width:28px; height:28px; border-radius:var(--radius-sm); border:1px solid var(--border);
+  background:none; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  font-size:14px; color:var(--ink3); transition:all 0.1s;
+}
+.detail-close:hover { background:var(--bg); color:var(--ink1); }
+.detail-contract-id { font-family:var(--mono); font-size:13px; font-weight:600; }
+.detail-contract-meta { font-size:11.5px; color:var(--ink3); }
+.detail-temp { margin-left:auto; width:8px; height:8px; border-radius:1px; }
+.detail-temp.red { background:var(--red); } .detail-temp.yellow { background:var(--yellow); } .detail-temp.green { background:var(--green); }
+.detail-body { flex:1; overflow-y:auto; padding:14px 16px; }
+.detail-body::-webkit-scrollbar { width:5px; }
+.detail-body::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+.detail-role-group { margin-bottom:14px; border:1px solid var(--border-light); border-radius:var(--radius); }
+.detail-role-header {
+  padding:7px 12px; background:var(--bg); display:flex; align-items:center; gap:8px;
+  border-bottom:1px solid var(--border-light);
+}
+.detail-role-badge { font-family:var(--mono); font-size:10px; font-weight:700; padding:2px 6px; background:var(--card); color:var(--ink2); border-radius:2px; }
+.detail-role-count { font-size:10.5px; color:var(--ink3); }
+.detail-batch-list { padding:6px 12px; }
+.detail-batch-row {
+  display:flex; align-items:center; gap:8px; padding:5px 0;
+  border-bottom:1px solid var(--border-light); font-size:12px;
+}
+.detail-batch-row:last-child { border-bottom:none; }
+.detail-batch-id { font-family:var(--mono); font-size:11px; font-weight:500; width:80px; flex-shrink:0; }
+.detail-batch-info { flex:1; color:var(--ink2); font-size:11.5px; }
+.detail-batch-tag { font-size:10px; font-family:var(--mono); font-weight:600; padding:1px 5px; border-radius:2px; }
+.detail-batch-tag.red { background:var(--red-bg); color:var(--red); }
+.detail-batch-tag.yellow { background:var(--yellow-bg); color:var(--yellow); }
+.detail-batch-tag.green { background:var(--green-bg); color:var(--green); }
+.detail-route { padding:5px 12px 8px; font-size:10.5px; color:var(--ink3); font-style:italic; }
+
+/* ===== Empty / Loading ===== */
 .empty { padding:40px 20px; text-align:center; color:var(--ink3); font-size:12px; line-height:1.8; }
-
-/* Loading */
-.loading { padding:20px; text-align:center; color:var(--ink4); font-family:var(--mono); font-size:11px; }
+.loading { padding:20px; text-align:center; color:var(--ink4); font-family:var(--mono); font-size:11px; letter-spacing:0.5px; }
 </style>
 </head>
 <body>
 
+<!-- Topbar -->
 <div class="topbar">
-  <span style="font-size:16px">🦉</span>
+  <span class="topbar-owl">
+    <svg viewBox="0 0 18 18" width="18" height="18" fill="none">
+      <circle cx="9" cy="8" r="6.5" fill="#C8C0B4"/>
+      <circle cx="5.5" cy="3.5" r="2.2" fill="#C8C0B4"/><circle cx="5.5" cy="3.5" r="1.3" fill="#D8D0C6"/>
+      <circle cx="12.5" cy="3.5" r="2.2" fill="#C8C0B4"/><circle cx="12.5" cy="3.5" r="1.3" fill="#D8D0C6"/>
+      <circle cx="7" cy="7.5" r="2" fill="#2A2520"/><circle cx="7" cy="7.5" r="1.3" fill="#E8B84A"/><circle cx="7.2" cy="7.2" r="0.6" fill="#2A2520"/><circle cx="7.4" cy="6.9" r="0.3" fill="#FFF"/>
+      <circle cx="11" cy="7.5" r="2" fill="#2A2520"/><circle cx="11" cy="7.5" r="1.3" fill="#E8B84A"/><circle cx="11.2" cy="7.2" r="0.6" fill="#2A2520"/><circle cx="11.4" cy="6.9" r="0.3" fill="#FFF"/>
+      <path d="M8.5 10 L9 10.8 L9.5 10" fill="#D4A050"/>
+      <ellipse cx="9" cy="14" rx="5" ry="3.5" fill="#B8B0A4"/>
+    </svg>
+  </span>
   <span class="topbar-title">履行工作台</span>
   <div class="topbar-spacer"></div>
-  <div class="stat" id="stat-red"><span class="dot red"></span><span id="count-red">-</span></div>
-  <div class="stat" id="stat-yellow"><span class="dot yellow"></span><span id="count-yellow">-</span></div>
-  <div class="stat" id="stat-green"><span class="dot green"></span><span id="count-green">-</span></div>
+  <div class="topbar-stats">
+    <div class="stat-item" data-status="uncommitted" onclick="flashGroups('uncommitted')"><span class="stat-dot red"></span><span id="count-red">-</span></div>
+    <div class="stat-item" data-status="not_met" onclick="flashGroups('not_met')"><span class="stat-dot yellow"></span><span id="count-yellow">-</span></div>
+    <div class="stat-item" data-status="met" onclick="flashGroups('met')"><span class="stat-dot green"></span><span id="count-green">-</span></div>
+  </div>
 </div>
 
+<!-- Content -->
 <div class="content">
-  <div class="section" id="alert-section">
-    <div class="section-header">
-      <span class="section-title">预警</span>
-      <span class="section-count" id="alert-count">-</span>
-      <span class="section-micro">grouped by who to contact</span>
+  <div class="dashboard">
+    <!-- Left Column -->
+    <div class="left-col">
+      <div class="section" id="alert-section">
+        <div class="section-header">
+          <span class="section-title">预警</span>
+          <span class="section-count" id="alert-count">-</span>
+          <span class="section-micro">grouped by contact</span>
+        </div>
+        <div id="alert-body"><div class="loading">LOADING...</div></div>
+      </div>
     </div>
-    <div id="alert-body">
-      <div class="loading">加载中...</div>
+
+    <!-- Right Column -->
+    <div class="right-col">
+      <!-- 等回复 -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">等回复</span>
+          <span class="section-count">3</span>
+          <span class="section-micro">ball in their court</span>
+        </div>
+        <div class="right-item">
+          <div class="right-avatar" style="background:#6B7280;">陈</div>
+          <div class="right-body">
+            <div class="right-name">陈七 <span class="right-role">承诺坐席</span></div>
+            <div style="font-size:11px;color:var(--ink3);">已发催承诺 · 2个批次</div>
+          </div>
+          <span class="right-status">WAITING</span>
+          <span class="right-time">10:45</span>
+        </div>
+        <div class="right-item">
+          <div class="right-avatar" style="background:#8B5CF6;">王</div>
+          <div class="right-body">
+            <div class="right-name">王五 <span class="right-role">大调度</span></div>
+            <div style="font-size:11px;color:var(--ink3);">已发提拉请求 · 1个批次</div>
+          </div>
+          <span class="right-status">WAITING</span>
+          <span class="right-time">09:32</span>
+        </div>
+        <div class="right-item">
+          <div class="right-avatar" style="background:#059669;">张</div>
+          <div class="right-body">
+            <div class="right-name">张三 <span class="right-role">供应经理</span></div>
+            <div style="font-size:11px;color:var(--ink3);">已发齐套确认 · 3个批次</div>
+          </div>
+          <span class="right-status">WAITING</span>
+          <span class="right-time">昨天</span>
+        </div>
+      </div>
+
+      <!-- 收到消息 -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">收到消息</span>
+          <span class="section-count">2</span>
+          <span class="section-micro">ball in your court</span>
+        </div>
+        <div class="right-item">
+          <div class="right-avatar incoming" style="background:#D97706;">李</div>
+          <div class="right-body">
+            <div class="right-name">李四 <span class="right-role">承诺坐席</span></div>
+            <div class="right-msg">"HWC0044Q 可以承诺到 03-30"</div>
+          </div>
+          <span class="right-time">14:23</span>
+          <button class="right-btn" onclick="this.textContent='已处理';this.disabled=true;this.style.color='var(--green)'">处理</button>
+        </div>
+        <div class="right-item">
+          <div class="right-avatar incoming" style="background:#2563EB;">赵</div>
+          <div class="right-body">
+            <div class="right-name">赵六 <span class="right-role">大调度</span></div>
+            <div class="right-msg">"提拉已安排，预计04-02到货"</div>
+          </div>
+          <span class="right-time">13:15</span>
+          <button class="right-btn" onclick="this.textContent='已确认';this.disabled=true;this.style.color='var(--green)'">确认</button>
+        </div>
+      </div>
+
+      <!-- 今日简报 -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">今日简报</span>
+          <span class="section-micro">daily brief</span>
+        </div>
+        <div class="briefing">
+          <div class="briefing-stats">
+            <span class="red" id="brief-red">- red</span>
+            <span class="yellow" id="brief-yellow">- yellow</span>
+            <span class="green" id="brief-green">- green</span>
+          </div>
+          <div class="briefing-note" id="brief-note">加载中...</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- Detail Panel -->
+<div class="detail-overlay" id="detail-overlay">
+  <div class="detail-backdrop" onclick="closeDetail()"></div>
+  <div class="detail-panel">
+    <div class="detail-header">
+      <button class="detail-close" onclick="closeDetail()">✕</button>
+      <div>
+        <div class="detail-contract-id" id="detail-id"></div>
+        <div class="detail-contract-meta" id="detail-meta"></div>
+      </div>
+      <div class="detail-temp" id="detail-temp"></div>
+    </div>
+    <div class="detail-body" id="detail-body"><div class="loading">LOADING...</div></div>
+  </div>
+</div>
+
 <script>
+let dashboardData = null;
+
 async function loadDashboard() {
   try {
     const r = await fetch('/api/dashboard');
-    const data = await r.json();
-    renderStats(data.stats);
-    renderAlerts(data.alert_groups);
-  } catch(e) {
-    document.getElementById('alert-body').innerHTML = '<div class="empty">加载失败: ' + e.message + '</div>';
+    dashboardData = await r.json();
+    renderStats(dashboardData.stats);
+    renderAlerts(dashboardData.alert_groups);
+    renderBriefing(dashboardData.stats);
+  } catch (e) {
+    document.getElementById('alert-body').innerHTML = '<div class="empty">加载失败: ' + esc(e.message) + '</div>';
   }
 }
 
-function renderStats(stats) {
-  document.getElementById('count-red').textContent = stats.red;
-  document.getElementById('count-yellow').textContent = stats.yellow;
-  document.getElementById('count-green').textContent = stats.green;
+function renderStats(s) {
+  document.getElementById('count-red').textContent = s.red;
+  document.getElementById('count-yellow').textContent = s.yellow;
+  document.getElementById('count-green').textContent = s.green;
+}
+
+function renderBriefing(s) {
+  document.getElementById('brief-red').textContent = s.red + ' red';
+  document.getElementById('brief-yellow').textContent = s.yellow + ' yellow';
+  document.getElementById('brief-green').textContent = s.green + ' green';
+  const total = s.red + s.yellow + s.green;
+  document.getElementById('brief-note').textContent = total > 0
+    ? '共 ' + total + ' 个批次需关注，其中 ' + s.red + ' 个未承诺需优先处理。'
+    : '所有合同履行状态正常，无需处理。';
 }
 
 function renderAlerts(groups) {
   const body = document.getElementById('alert-body');
-
   if (!groups || groups.length === 0) {
-    body.innerHTML = '<div class="empty">没有需要处理的预警。所有合同状态正常。</div>';
+    body.innerHTML = '<div class="empty">没有需要处理的预警。<br>所有合同状态正常。</div>';
     document.getElementById('alert-count').textContent = '0';
     return;
   }
-
   let totalBatches = 0;
   let html = '';
-
   for (const g of groups) {
     totalBatches += g.total_batches;
-
-    html += '<div class="alert-group">';
+    html += '<div class="alert-group" data-role="' + esc(g.role) + '">';
     html += '<div class="group-header">';
     html += '<span class="group-role">' + esc(g.role) + '</span>';
-    html += '<span class="group-count">' + g.total_batches + '个批次 · ' + g.total_contracts + '个合同</span>';
+    html += '<span class="group-count">' + g.total_batches + ' 批次 · ' + g.total_contracts + ' 合同</span>';
     html += '</div>';
-
     for (const c of g.contracts) {
-      html += '<div class="contract-block">';
+      html += '<div class="contract-block" onclick="openDetail(\'' + esc(c.contract) + '\')">';
       html += '<div class="contract-header">';
       html += '<span class="contract-id">' + esc(c.contract) + '</span>';
-      html += '<span class="contract-meta">' + esc(c.project) + ' · ' + c.batches.length + '个批次</span>';
+      html += '<span class="contract-meta">' + esc(c.project) + ' · ' + c.batches.length + ' 批次</span>';
       html += '</div>';
-
+      html += '<div class="batch-list">';
       for (const b of c.batches) {
         html += '<div class="batch-row">';
+        html += '<span class="batch-dot ' + b.status + '"></span>';
         html += '<span class="batch-id">' + esc(b.batch) + '</span>';
         html += '<span class="batch-info">';
         if (b.status === 'uncommitted') {
           html += 'RPD ' + esc(b.rpd) + ' · CPD 未承诺';
         } else if (b.status === 'not_met') {
-          html += 'CPD ' + esc(b.cpd) + ' → 目标 ' + esc(b.rpd);
+          html += 'CPD ' + esc(b.cpd) + ' → RPD ' + esc(b.rpd);
         } else {
           html += 'CPD ' + esc(b.cpd) + ' · RPD ' + esc(b.rpd);
         }
-        if (b.urgent) html += ' · 急单';
+        if (b.urgent) html += ' · <b>急单</b>';
         if (b.kit === '欠料') html += ' · 欠料';
         html += '</span>';
         html += '<span class="batch-status ' + b.status + '">' + esc(b.risk_label) + '</span>';
         html += '</div>';
       }
-
-      // Route hint
-      const firstBatch = c.batches[0];
-      if (firstBatch && firstBatch.contact_reason) {
-        html += '<div class="route-hint">路由: ' + esc(firstBatch.contact_reason) + '</div>';
+      html += '</div>';
+      const first = c.batches[0];
+      if (first && first.contact_reason) {
+        html += '<div class="route-hint">路由: ' + esc(first.contact_reason) + '</div>';
       }
-
-      html += '</div>'; // contract-block
+      html += '</div>';
     }
-
-    // Action buttons
     html += '<div class="group-actions">';
+    const bid = 'btn-' + Math.random().toString(36).slice(2, 8);
     if (g.role === '承诺坐席') {
-      html += '<button class="btn primary">催承诺(' + g.total_batches + '个批次)</button>';
+      html += '<button class="btn primary" id="' + bid + '" onclick="flashBtn(\'' + bid + '\',\'催承诺\')">催承诺(' + g.total_batches + ')</button>';
     } else if (g.role === '大调度') {
-      html += '<button class="btn primary">批量提拉(' + g.total_batches + '个批次)</button>';
-      html += '<button class="btn secondary">生成提拉邮件</button>';
+      const bid2 = 'btn-' + Math.random().toString(36).slice(2, 8);
+      html += '<button class="btn primary" id="' + bid + '" onclick="flashBtn(\'' + bid + '\',\'批量提拉\')">批量提拉(' + g.total_batches + ')</button>';
+      html += '<button class="btn secondary" id="' + bid2 + '" onclick="flashBtn(\'' + bid2 + '\',\'生成邮件\')">生成提拉邮件</button>';
     } else {
-      html += '<button class="btn primary">找提拉座席(' + g.total_batches + '个批次)</button>';
+      html += '<button class="btn primary" id="' + bid + '" onclick="flashBtn(\'' + bid + '\',\'已发送\')">找' + esc(g.role) + '(' + g.total_batches + ')</button>';
     }
     html += '</div>';
-
-    html += '</div>'; // alert-group
+    html += '</div>';
   }
-
   body.innerHTML = html;
-  document.getElementById('alert-count').textContent = totalBatches + '个批次';
+  document.getElementById('alert-count').textContent = totalBatches + ' 批次';
 }
 
+/* ===== Detail Panel ===== */
+async function openDetail(contractId) {
+  const overlay = document.getElementById('detail-overlay');
+  document.getElementById('detail-id').textContent = contractId;
+  document.getElementById('detail-meta').textContent = '加载中...';
+  document.getElementById('detail-temp').className = 'detail-temp';
+  document.getElementById('detail-body').innerHTML = '<div class="loading">LOADING...</div>';
+  overlay.classList.add('open');
+  try {
+    const r = await fetch('/api/contracts/' + encodeURIComponent(contractId));
+    const data = await r.json();
+    renderDetail(data);
+  } catch (e) {
+    document.getElementById('detail-body').innerHTML = '<div class="empty">加载失败: ' + esc(e.message) + '</div>';
+  }
+}
+
+function renderDetail(data) {
+  const c = data.contract || data;
+  document.getElementById('detail-id').textContent = c.contract || c.contract_id || '';
+  document.getElementById('detail-meta').textContent = (c.project || '') + (c.customer ? ' · ' + c.customer : '');
+  // Temperature dot
+  const temp = document.getElementById('detail-temp');
+  const worstStatus = getWorstStatus(c.batches || []);
+  temp.className = 'detail-temp ' + worstStatus;
+
+  const batches = c.batches || [];
+  if (batches.length === 0) {
+    document.getElementById('detail-body').innerHTML = '<div class="empty">无批次数据</div>';
+    return;
+  }
+  // Group batches by contact_role
+  const roleGroups = {};
+  for (const b of batches) {
+    const role = b.contact_role || '未分配';
+    if (!roleGroups[role]) roleGroups[role] = [];
+    roleGroups[role].push(b);
+  }
+  let html = '';
+  for (const [role, rBatches] of Object.entries(roleGroups)) {
+    html += '<div class="detail-role-group">';
+    html += '<div class="detail-role-header">';
+    html += '<span class="detail-role-badge">' + esc(role) + '</span>';
+    html += '<span class="detail-role-count">' + rBatches.length + ' 批次</span>';
+    html += '</div>';
+    html += '<div class="detail-batch-list">';
+    for (const b of rBatches) {
+      html += '<div class="detail-batch-row">';
+      html += '<span class="detail-batch-id">' + esc(b.batch) + '</span>';
+      html += '<span class="detail-batch-info">';
+      if (b.cpd) html += 'CPD ' + esc(b.cpd) + ' ';
+      if (b.rpd) html += 'RPD ' + esc(b.rpd) + ' ';
+      if (b.kit) html += '· ' + esc(b.kit);
+      html += '</span>';
+      const tagColor = b.status === 'uncommitted' ? 'red' : b.status === 'not_met' ? 'yellow' : 'green';
+      html += '<span class="detail-batch-tag ' + tagColor + '">' + esc(b.risk_label) + '</span>';
+      html += '</div>';
+    }
+    html += '</div>';
+    const firstB = rBatches[0];
+    if (firstB && firstB.contact_reason) {
+      html += '<div class="detail-route">路由: ' + esc(firstB.contact_reason) + '</div>';
+    }
+    html += '</div>';
+  }
+  document.getElementById('detail-body').innerHTML = html;
+}
+
+function getWorstStatus(batches) {
+  if (batches.some(b => b.status === 'uncommitted')) return 'red';
+  if (batches.some(b => b.status === 'not_met')) return 'yellow';
+  return 'green';
+}
+
+function closeDetail() {
+  document.getElementById('detail-overlay').classList.remove('open');
+}
+
+/* ===== Button Flash ===== */
+function flashBtn(id, label) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  const orig = btn.textContent;
+  btn.textContent = '已发送 ✓';
+  btn.classList.remove('primary', 'secondary');
+  btn.classList.add('sent');
+  setTimeout(() => {
+    btn.textContent = orig;
+    btn.classList.remove('sent');
+    btn.classList.add('primary');
+  }, 1500);
+}
+
+/* ===== Stat Click → Highlight Groups ===== */
+function flashGroups(status) {
+  const statMap = { uncommitted: 'red', not_met: 'yellow', met: 'green' };
+  const items = document.querySelectorAll('.stat-item');
+  items.forEach(el => { if (el.dataset.status === status) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); } });
+  document.querySelectorAll('.alert-group').forEach(el => {
+    el.classList.remove('highlight');
+    void el.offsetWidth;
+    el.classList.add('highlight');
+  });
+}
+
+/* ===== Keyboard ===== */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeDetail();
+});
+
+/* ===== Escape HTML ===== */
 function esc(s) {
   if (s == null) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 loadDashboard();
 </script>
-
 </body>
 </html>
