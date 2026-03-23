@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supply Owl — 履行工作台</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sans: 'IBM Plex Sans', -apple-system, sans-serif;
+  --mono: 'IBM Plex Mono', 'SF Mono', monospace;
+  --bg: #F0F1F3; --card: #FFF; --border: #D5D8DC; --border-light: #E9EBED;
+  --ink1: #111; --ink2: #555; --ink3: #888; --ink4: #AAA;
+  --red: #D32F2F; --red-bg: #FDECEA;
+  --yellow: #C17D10; --yellow-bg: #FDF4E4;
+  --green: #1F8B4C; --green-bg: #E8F5EC;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:var(--sans); background:var(--bg); color:var(--ink1); font-size:13px; }
+
+/* Layout */
+.topbar {
+  height:48px; background:var(--card); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; padding:0 20px; gap:12px;
+}
+.topbar-title { font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; color:var(--ink2); }
+.topbar-spacer { flex:1; }
+.stat { display:flex; align-items:center; gap:4px; font-family:var(--mono); font-size:13px; font-weight:700; padding:3px 8px; cursor:default; }
+.stat .dot { width:6px; height:6px; border-radius:1px; }
+.dot.red { background:var(--red); } .dot.yellow { background:var(--yellow); } .dot.green { background:var(--green); }
+
+.content { padding:16px 20px; max-width:1200px; margin:0 auto; }
+
+/* Section */
+.section { background:var(--card); border:1px solid var(--border); border-radius:2px; margin-bottom:16px; }
+.section-header {
+  padding:8px 14px; display:flex; align-items:center; gap:8px;
+  border-bottom:1px solid var(--border-light);
+}
+.section-title { font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--ink3); }
+.section-count { font-family:var(--mono); font-size:10px; font-weight:700; color:var(--ink4); background:var(--bg); padding:1px 6px; border-radius:2px; }
+.section-micro { font-family:var(--mono); font-size:9px; color:var(--ink4); margin-left:auto; letter-spacing:0.05em; }
+
+/* Alert Group */
+.alert-group { border-bottom:1px solid var(--border); }
+.alert-group:last-child { border-bottom:none; }
+.group-header { padding:10px 14px; display:flex; align-items:center; gap:8px; }
+.group-role { font-family:var(--mono); font-size:10px; font-weight:700; padding:2px 6px; background:var(--bg); color:var(--ink2); border-radius:2px; }
+.group-count { font-size:11px; color:var(--ink3); }
+
+/* Contract block */
+.contract-block {
+  margin:4px 10px 6px; padding:8px 10px; background:var(--bg);
+  border:1px solid var(--border-light); border-radius:2px; cursor:pointer;
+  transition:background 0.1s;
+}
+.contract-block:hover { background:var(--border-light); border-color:var(--border); }
+.contract-header { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+.contract-id { font-family:var(--mono); font-size:12px; font-weight:600; }
+.contract-meta { font-size:11px; color:var(--ink3); }
+
+/* Batch row */
+.batch-row { display:flex; align-items:center; gap:8px; padding:2px 0; font-size:12px; }
+.batch-id { font-family:var(--mono); font-size:11px; font-weight:500; width:80px; flex-shrink:0; }
+.batch-info { flex:1; color:var(--ink2); font-size:11px; }
+.batch-status { font-family:var(--mono); font-size:10px; font-weight:700; padding:1px 5px; border-radius:2px; }
+.batch-status.uncommitted { background:var(--red-bg); color:var(--red); }
+.batch-status.not_met { background:var(--yellow-bg); color:var(--yellow); }
+.batch-status.met { background:var(--green-bg); color:var(--green); }
+
+/* Routing hint */
+.route-hint { font-size:10px; color:var(--yellow); font-style:italic; padding:2px 14px 6px; }
+
+/* Actions */
+.group-actions { padding:4px 14px 10px; display:flex; gap:6px; flex-wrap:wrap; }
+.btn {
+  font-family:var(--sans); font-size:11px; font-weight:600; padding:4px 10px;
+  border:none; border-radius:2px; cursor:pointer; transition:all 0.1s;
+}
+.btn.primary { background:var(--ink1); color:#FFF; }
+.btn.primary:hover { background:#333; }
+.btn.secondary { background:var(--bg); color:var(--ink2); border:1px solid var(--border); }
+.btn.secondary:hover { background:var(--border-light); color:var(--ink1); }
+
+/* Empty state */
+.empty { padding:40px 20px; text-align:center; color:var(--ink3); font-size:12px; line-height:1.8; }
+
+/* Loading */
+.loading { padding:20px; text-align:center; color:var(--ink4); font-family:var(--mono); font-size:11px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span style="font-size:16px">🦉</span>
+  <span class="topbar-title">履行工作台</span>
+  <div class="topbar-spacer"></div>
+  <div class="stat" id="stat-red"><span class="dot red"></span><span id="count-red">-</span></div>
+  <div class="stat" id="stat-yellow"><span class="dot yellow"></span><span id="count-yellow">-</span></div>
+  <div class="stat" id="stat-green"><span class="dot green"></span><span id="count-green">-</span></div>
+</div>
+
+<div class="content">
+  <div class="section" id="alert-section">
+    <div class="section-header">
+      <span class="section-title">预警</span>
+      <span class="section-count" id="alert-count">-</span>
+      <span class="section-micro">grouped by who to contact</span>
+    </div>
+    <div id="alert-body">
+      <div class="loading">加载中...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function loadDashboard() {
+  try {
+    const r = await fetch('/api/dashboard');
+    const data = await r.json();
+    renderStats(data.stats);
+    renderAlerts(data.alert_groups);
+  } catch(e) {
+    document.getElementById('alert-body').innerHTML = '<div class="empty">加载失败: ' + e.message + '</div>';
+  }
+}
+
+function renderStats(stats) {
+  document.getElementById('count-red').textContent = stats.red;
+  document.getElementById('count-yellow').textContent = stats.yellow;
+  document.getElementById('count-green').textContent = stats.green;
+}
+
+function renderAlerts(groups) {
+  const body = document.getElementById('alert-body');
+
+  if (!groups || groups.length === 0) {
+    body.innerHTML = '<div class="empty">没有需要处理的预警。所有合同状态正常。</div>';
+    document.getElementById('alert-count').textContent = '0';
+    return;
+  }
+
+  let totalBatches = 0;
+  let html = '';
+
+  for (const g of groups) {
+    totalBatches += g.total_batches;
+
+    html += '<div class="alert-group">';
+    html += '<div class="group-header">';
+    html += '<span class="group-role">' + esc(g.role) + '</span>';
+    html += '<span class="group-count">' + g.total_batches + '个批次 · ' + g.total_contracts + '个合同</span>';
+    html += '</div>';
+
+    for (const c of g.contracts) {
+      html += '<div class="contract-block">';
+      html += '<div class="contract-header">';
+      html += '<span class="contract-id">' + esc(c.contract) + '</span>';
+      html += '<span class="contract-meta">' + esc(c.project) + ' · ' + c.batches.length + '个批次</span>';
+      html += '</div>';
+
+      for (const b of c.batches) {
+        html += '<div class="batch-row">';
+        html += '<span class="batch-id">' + esc(b.batch) + '</span>';
+        html += '<span class="batch-info">';
+        if (b.status === 'uncommitted') {
+          html += 'RPD ' + esc(b.rpd) + ' · CPD 未承诺';
+        } else if (b.status === 'not_met') {
+          html += 'CPD ' + esc(b.cpd) + ' → 目标 ' + esc(b.rpd);
+        } else {
+          html += 'CPD ' + esc(b.cpd) + ' · RPD ' + esc(b.rpd);
+        }
+        if (b.urgent) html += ' · 急单';
+        if (b.kit === '欠料') html += ' · 欠料';
+        html += '</span>';
+        html += '<span class="batch-status ' + b.status + '">' + esc(b.risk_label) + '</span>';
+        html += '</div>';
+      }
+
+      // Route hint
+      const firstBatch = c.batches[0];
+      if (firstBatch && firstBatch.contact_reason) {
+        html += '<div class="route-hint">路由: ' + esc(firstBatch.contact_reason) + '</div>';
+      }
+
+      html += '</div>'; // contract-block
+    }
+
+    // Action buttons
+    html += '<div class="group-actions">';
+    if (g.role === '承诺坐席') {
+      html += '<button class="btn primary">催承诺(' + g.total_batches + '个批次)</button>';
+    } else if (g.role === '大调度') {
+      html += '<button class="btn primary">批量提拉(' + g.total_batches + '个批次)</button>';
+      html += '<button class="btn secondary">生成提拉邮件</button>';
+    } else {
+      html += '<button class="btn primary">找提拉座席(' + g.total_batches + '个批次)</button>';
+    }
+    html += '</div>';
+
+    html += '</div>'; // alert-group
+  }
+
+  body.innerHTML = html;
+  document.getElementById('alert-count').textContent = totalBatches + '个批次';
+}
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+loadDashboard();
+</script>
+
+</body>
+</html>
