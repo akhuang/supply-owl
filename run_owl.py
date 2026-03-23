@@ -7,12 +7,9 @@ Supply Owl — 用 Hermes AIAgent 引擎跑
 - 上下文压缩
 """
 
-# Patch httpx for Ollama compatibility — MUST be first
-import ollama_patch
-
 import os
-os.environ.setdefault("OPENAI_BASE_URL", "http://localhost:11434/v1")
-os.environ.setdefault("OPENAI_API_KEY", "ollama")
+from dotenv import load_dotenv
+load_dotenv()  # Reads .env (NO_PROXY, OPENAI_BASE_URL, OPENAI_API_KEY)
 
 from hermes.run_agent import AIAgent
 
