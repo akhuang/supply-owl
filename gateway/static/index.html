@@ -562,7 +562,11 @@ async function openDraft(group, action) {
       }),
     });
     const data = await r.json();
-    document.getElementById('draft-text').value = data.draft;
+    if (!r.ok) {
+      document.getElementById('draft-text').value = '草稿生成失败 (' + r.status + '): ' + JSON.stringify(data);
+      return;
+    }
+    document.getElementById('draft-text').value = data.draft || '(草稿内容为空)';
     document.getElementById('draft-send-btn').disabled = false;
   } catch (e) {
     document.getElementById('draft-text').value = '草稿生成失败: ' + e.message;
