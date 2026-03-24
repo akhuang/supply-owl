@@ -203,8 +203,8 @@ def _get_agent():
 
     from nanobot.config.loader import load_config
     from nanobot.agent.loop import AgentLoop
-    from nanobot.channels.bus import MessageBus
-    from nanobot.sessions.manager import SessionManager
+    from nanobot.bus.queue import MessageBus
+    from nanobot.session.manager import SessionManager
     from nanobot.cli.commands import _make_provider
 
     config = load_config()
