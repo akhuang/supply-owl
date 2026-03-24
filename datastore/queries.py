@@ -3,7 +3,7 @@
 
 职责：
 1. 从 SQLite 读原始数据
-2. 代码做判断（温度、风险、联系人路由）
+2. 代码做判断（风险等级、风险、联系人路由）
 3. 返回结构化结果
 
 不做：LLM 调用、消息生成、UI 渲染
@@ -99,22 +99,22 @@ def analyze_contract(db: OwlDB, contract_no: str) -> dict:
     analyzed = [analyze_batch(b) for b in batches]
     first = batches[0]
 
-    # 合同温度
+    # 合同风险等级
     if any(a["status"] == "not_met" and a["urgent"] for a in analyzed):
-        temperature = "red"
+        risk_level = "red"
     elif any(a["status"] == "not_met" for a in analyzed):
-        temperature = "yellow"
+        risk_level = "yellow"
     elif any(a["status"] == "uncommitted" for a in analyzed):
-        temperature = "yellow"
+        risk_level = "yellow"
     else:
-        temperature = "green"
+        risk_level = "green"
 
     return {
         "contract": contract_no,
         "found": True,
         "project": first.project_name or "",
         "customer": first.customer or "",
-        "temperature": temperature,
+        "risk_level": risk_level,
         "batches": analyzed,
     }
 
@@ -159,9 +159,9 @@ def build_dashboard(db: OwlDB) -> dict:
             "contracts": list(g["contracts"].values()),
         })
 
-    red = sum(1 for c in contracts if c["temperature"] == "red")
-    yellow = sum(1 for c in contracts if c["temperature"] == "yellow")
-    green = sum(1 for c in contracts if c["temperature"] == "green")
+    red = sum(1 for c in contracts if c["risk_level"] == "red")
+    yellow = sum(1 for c in contracts if c["risk_level"] == "yellow")
+    green = sum(1 for c in contracts if c["risk_level"] == "green")
 
     return {
         "total_contracts": len(contracts),

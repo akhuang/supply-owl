@@ -99,7 +99,7 @@ def test_analyze_batch_met(db):
 def test_analyze_contract(db):
     result = analyze_contract(db, "1Y01052508474L")
     assert result["found"] is True
-    assert result["temperature"] in ("yellow", "red")  # uncommitted + urgent
+    assert result["risk_level"] in ("yellow", "red")  # uncommitted + urgent
     assert result["customer"] == "中国移动"
 
 
