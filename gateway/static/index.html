@@ -295,6 +295,21 @@ body { font-family:var(--sans); background:var(--bg); color:var(--ink1); font-si
   </div>
 </div>
 
+<!-- Chat Bar -->
+<div id="chat-bar" style="position:fixed;bottom:0;left:56px;right:0;background:var(--card);border-top:1px solid var(--border);padding:8px 16px;z-index:100;display:flex;gap:8px;align-items:center;">
+  <svg viewBox="0 0 18 18" width="20" height="20" fill="none" style="flex-shrink:0;opacity:0.5;">
+    <circle cx="9" cy="8" r="6.5" fill="#C8C0B4"/>
+    <circle cx="7" cy="7.5" r="1.3" fill="#E8B84A"/><circle cx="11" cy="7.5" r="1.3" fill="#E8B84A"/>
+    <path d="M8.5 10 L9 10.8 L9.5 10" fill="#D4A050"/>
+  </svg>
+  <input id="chat-input" type="text" placeholder="输入合同号或问题..."
+    style="flex:1;border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;background:var(--bg);color:var(--ink);outline:none;font-family:var(--sans);"
+    onkeydown="if(event.key==='Enter')sendChat()">
+  <button onclick="sendChat()" style="border:none;background:var(--accent);color:#fff;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px;font-weight:600;">发送</button>
+</div>
+<div id="chat-messages" style="position:fixed;bottom:52px;left:56px;right:0;max-height:40vh;overflow-y:auto;background:var(--bg);border-top:1px solid var(--border);display:none;z-index:99;padding:12px 16px;">
+</div>
+
 <!-- Detail Panel -->
 <div class="detail-overlay" id="detail-overlay">
   <div class="detail-backdrop" onclick="closeDetail()"></div>
@@ -726,6 +741,49 @@ function formatTime(dateStr) {
 function esc(s) {
   if (s == null) return '';
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ===== Chat =====
+
+function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+
+  const panel = document.getElementById('chat-messages');
+  panel.style.display = 'block';
+
+  // 显示用户消息
+  panel.innerHTML += `<div style="margin-bottom:8px;text-align:right;">
+    <span style="background:var(--accent);color:#fff;padding:6px 12px;border-radius:12px 12px 2px 12px;font-size:13px;display:inline-block;max-width:70%;">${esc(msg)}</span>
+  </div>`;
+
+  // 显示加载状态
+  const loadingId = 'loading-' + Date.now();
+  panel.innerHTML += `<div id="${loadingId}" style="margin-bottom:8px;">
+    <span style="background:var(--card);border:1px solid var(--border);padding:6px 12px;border-radius:12px 12px 12px 2px;font-size:13px;display:inline-block;color:var(--ink3);">Owl 思考中...</span>
+  </div>`;
+  panel.scrollTop = panel.scrollHeight;
+
+  fetch('/api/chat', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({message: msg}),
+  })
+  .then(r => r.json())
+  .then(data => {
+    const el = document.getElementById(loadingId);
+    const reply = data.reply || data.error || JSON.stringify(data);
+    if (el) {
+      el.innerHTML = `<span style="background:var(--card);border:1px solid var(--border);padding:8px 12px;border-radius:12px 12px 12px 2px;font-size:13px;display:inline-block;max-width:80%;white-space:pre-wrap;">${esc(reply)}</span>`;
+    }
+    panel.scrollTop = panel.scrollHeight;
+  })
+  .catch(err => {
+    const el = document.getElementById(loadingId);
+    if (el) el.innerHTML = `<span style="color:red;font-size:12px;">错误: ${esc(err.message)}</span>`;
+  });
 }
 
 // ===== Init =====

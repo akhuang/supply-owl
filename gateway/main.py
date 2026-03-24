@@ -10,6 +10,7 @@ import sqlite3
 from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
+import httpx
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -189,6 +190,34 @@ async def receive_fragment(fragment: Fragment):
         content=fragment.context or "",
     )
     return {"received": True, "contract": contract}
+
+# ========== AI Chat (转发到 nanobot gateway) ==========
+
+NANOBOT_URL = os.environ.get("NANOBOT_URL", "http://127.0.0.1:18790")
+_chat_client = httpx.AsyncClient(proxy=None, timeout=300)
+
+
+class ChatRequest(BaseModel):
+    message: str
+    session: str = "webui:default"
+
+
+@app.post("/api/chat")
+async def chat(req: ChatRequest):
+    """AI 对话 — 转发到 nanobot gateway"""
+    try:
+        resp = await _chat_client.post(
+            f"{NANOBOT_URL}/api/chat",
+            json={"message": req.message, "session": req.session},
+        )
+        if resp.status_code == 200:
+            return resp.json()
+        return {"error": f"nanobot 返回 {resp.status_code}", "detail": resp.text}
+    except httpx.ConnectError:
+        return {"error": "nanobot gateway 未启动，请运行: nanobot gateway"}
+    except Exception as e:
+        return {"error": str(e)}
+
 
 @app.post("/api/sync")
 def sync_snapshot(snapshot_path: str = ""):
