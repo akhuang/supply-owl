@@ -8,16 +8,9 @@
 
 ```bash
 # 1. Ollama
-ollama pull qwen2.5:14b && ollama serve
+ollama pull qwen3:32b && ollama serve
 
-# 2. Hermes 配置（首次）
-cat > ~/.hermes/config.yaml << 'EOF'
-model:
-  default: "qwen2.5:14b"
-  base_url: "http://localhost:11434/v1"
-EOF
-
-# 3. 数据初始化（首次）
+# 2. 数据初始化（首次）
 cd /path/to/supply-owl
 python3 -c "
 from datastore import OwlDB; from pathlib import Path
@@ -26,6 +19,20 @@ db.conn.executescript(Path('datastore/seed.sql').read_text())
 db.conn.executescript(Path('datastore/seed_extra.sql').read_text())
 db.conn.commit(); db.close(); print('20 contracts loaded')
 "
+
+# 3. 修改根目录 .env
+# 4. 直接启动
+./run.sh web
+./run.sh tui
+./run.sh both
+```
+
+Windows:
+
+```bat
+run.bat web
+run.bat tui
+run.bat both
 ```
 
 ## 两种使用方式
@@ -33,7 +40,7 @@ db.conn.commit(); db.close(); print('20 contracts loaded')
 ### Web 仪表盘
 
 ```bash
-NO_PROXY=localhost,127.0.0.1 python3 -m uvicorn gateway.main:app --port 8000
+./run.sh web
 ```
 
 打开 http://localhost:8000
@@ -44,19 +51,10 @@ NO_PROXY=localhost,127.0.0.1 python3 -m uvicorn gateway.main:app --port 8000
 ### TUI 终端
 
 ```bash
-cd hermes
-
-# 交互模式
-NO_PROXY=localhost,127.0.0.1 python cli.py
-
-# 单次查询
-NO_PROXY=localhost,127.0.0.1 python cli.py -q "1Y01052508474L 什么情况"
-
-# 恢复上次会话
-NO_PROXY=localhost,127.0.0.1 python cli.py --resume <session_id>
+./run.sh tui
 ```
 
-TUI 功能更完整：工具调用可视化、会话恢复、技能系统、`/help` 看所有命令。
+TUI 功能更完整：工具调用可视化、会话恢复、技能系统、`/help` 看所有命令。`run.sh` / `run.bat` 会自动把根目录 `.env` 同步到项目本地 `./.hermes/.env`，不再依赖 `~/.hermes/.env`。
 
 ## 项目结构
 
@@ -92,6 +90,8 @@ supply-owl/
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
-| `LLM_MODEL` | `qwen2.5:14b` | Ollama 模型名 |
+| `LLM_MODEL` | `qwen3:32b` | Ollama 模型名 |
+| `LLM_BASE_URL` | `http://localhost:11434/v1` | OpenAI 兼容接口地址 |
+| `LLM_API_KEY` | `ollama` | OpenAI 兼容接口密钥 |
 | `OWL_DB_PATH` | `./owl.db` | SQLite 数据库路径 |
 | `NO_PROXY` | — | 必须设 `localhost,127.0.0.1` |
