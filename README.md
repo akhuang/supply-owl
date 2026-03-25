@@ -7,11 +7,25 @@
 ## 快速开始
 
 ```bash
-# 1. Ollama
-ollama pull qwen3:32b && ollama serve
+# 1. Clone
+git clone https://github.com/akhuang/supply-owl.git
+cd supply-owl
 
-# 2. 数据初始化（首次）
-cd /path/to/supply-owl
+# 2. Hermes Agent（不在 git 里，需要单独 clone）
+git clone --depth 1 https://github.com/NousResearch/hermes-agent.git hermes
+
+# 3. Python 依赖
+pip install -e hermes
+pip install fastapi uvicorn python-dotenv
+
+# 4. Ollama
+ollama pull qwen3:32b
+ollama serve
+
+# 5. 配置 .env（改模型/API 地址在这里）
+# 默认已配好 Ollama 本地，内部环境改 LLM_BASE_URL 和 LLM_API_KEY
+
+# 6. 数据初始化（首次）
 python3 -c "
 from datastore import OwlDB; from pathlib import Path
 db = OwlDB('owl.db')
@@ -20,16 +34,19 @@ db.conn.executescript(Path('datastore/seed_extra.sql').read_text())
 db.conn.commit(); db.close(); print('20 contracts loaded')
 "
 
-# 3. 修改根目录 .env
-# 4. 直接启动
-./run.sh web
-./run.sh tui
-./run.sh both
+# 7. 启动
+./run.sh web     # Web 仪表盘
+./run.sh tui     # TUI 终端
+./run.sh both    # Web + TUI
 ```
 
 Windows:
 
 ```bat
+git clone --depth 1 https://github.com/NousResearch/hermes-agent.git hermes
+pip install -e hermes
+pip install fastapi uvicorn python-dotenv
+
 run.bat web
 run.bat tui
 run.bat both
@@ -74,7 +91,7 @@ supply-owl/
 │   ├── SOUL.md             # 人设（像同事不像机器人）
 │   ├── MEMORY.md           # 业务决策规则
 │   └── USER.md             # 用户画像
-├── hermes/                 # Hermes Agent 框架
+├── hermes/                 # Hermes Agent 框架（git clone，不在仓库里）
 └── owl.db                  # SQLite 数据库
 ```
 
@@ -86,7 +103,7 @@ supply-owl/
 仪表盘不是聊天 → 主界面是工作台，AI 嵌在操作流程里
 ```
 
-## 环境变量
+## 环境变量（.env）
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
