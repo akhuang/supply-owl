@@ -190,40 +190,7 @@ async def receive_fragment(fragment: Fragment):
     )
     return {"received": True, "contract": contract}
 
-# ========== AI Chat (嵌入 nanobot agent) ==========
-
-_agent_loop = None
-
-
-def _get_agent():
-    """懒加载 nanobot AgentLoop"""
-    global _agent_loop
-    if _agent_loop is not None:
-        return _agent_loop
-
-    from nanobot.config.loader import load_config
-    from nanobot.agent.loop import AgentLoop
-    from nanobot.bus.queue import MessageBus
-    from nanobot.session.manager import SessionManager
-    from nanobot.cli.commands import _make_provider
-
-    config = load_config()
-    bus = MessageBus()
-    provider = _make_provider(config)
-    session_manager = SessionManager(config.workspace_path)
-
-    _agent_loop = AgentLoop(
-        bus=bus,
-        provider=provider,
-        workspace=config.workspace_path,
-        model=config.agents.defaults.model,
-        max_iterations=config.agents.defaults.max_tool_iterations,
-        context_window_tokens=config.agents.defaults.context_window_tokens,
-        session_manager=session_manager,
-        mcp_servers=config.tools.mcp_servers,
-    )
-    return _agent_loop
-
+# ========== AI Chat (Hermes AIAgent) ==========
 
 class ChatRequest(BaseModel):
     message: str
@@ -231,19 +198,11 @@ class ChatRequest(BaseModel):
 
 
 @app.post("/api/chat")
-async def chat(req: ChatRequest):
-    """AI 对话 — 嵌入 nanobot agent，带 SOUL + 记忆 + MCP 工具"""
-    try:
-        agent = _get_agent()
-        reply = await agent.process_direct(
-            content=req.message,
-            session_key=req.session,
-            channel="web",
-            chat_id="dashboard",
-        )
-        return {"reply": reply}
-    except Exception as e:
-        return {"error": str(e)}
+async def chat_endpoint(req: ChatRequest):
+    """AI 对话 — Hermes AIAgent，带 SOUL 人设"""
+    from ai_engine import chat
+    reply = await chat(req.message, session_key=req.session)
+    return {"reply": reply}
 
 
 @app.post("/api/sync")
