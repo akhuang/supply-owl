@@ -47,6 +47,7 @@ def _get_agent():
             model=os.environ.get("LLM_MODEL", "qwen2.5:14b"),
             quiet_mode=True,
             platform="web",
+            enabled_toolsets=["memory"],  # 只保留记忆，去掉 browser/file/code 等 27 个工具
         )
     finally:
         os.chdir(original_cwd)
