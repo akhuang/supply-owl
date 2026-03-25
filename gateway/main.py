@@ -73,9 +73,48 @@ def _init_db():
 
 _init_db()
 
-# 合同数据层（替代 supply-cli subprocess 调用）
+# 合同数据层
 OWL_DB_PATH = os.environ.get("OWL_DB_PATH", str(Path(__file__).parent.parent / "owl.db"))
 owl_db = OwlDB(OWL_DB_PATH)
+
+# ========== store.json 自动同步 ==========
+
+import threading
+import time as _time
+
+STORE_JSON_PATH = os.environ.get("STORE_JSON_PATH", "~/.supply-cli/store.json")
+_store_path = Path(STORE_JSON_PATH).expanduser()
+_last_mtime: float = 0
+
+
+def _sync_if_changed():
+    """检查 store.json 是否有变化，有则自动导入"""
+    global _last_mtime
+    if not _store_path.exists():
+        return
+    mtime = _store_path.stat().st_mtime
+    if mtime > _last_mtime:
+        try:
+            stats = owl_db.import_snapshot(str(_store_path))
+            _last_mtime = mtime
+            print(f"[Owl] store.json 已同步: {stats['batches']} batches, {stats['cases']} cases")
+        except Exception as e:
+            print(f"[Owl] store.json 同步失败: {e}")
+
+
+def _watch_store_json():
+    """后台线程，每 10 秒检查一次 store.json"""
+    while True:
+        _sync_if_changed()
+        _time.sleep(10)
+
+
+# 启动时立即同步一次
+_sync_if_changed()
+
+# 后台持续监听
+_watcher = threading.Thread(target=_watch_store_json, daemon=True)
+_watcher.start()
 
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
