@@ -29,3 +29,5 @@ Thumbs.db
 hermes/
 .hermes/
 messages.db
+owl.db-shm
+owl.db-wal

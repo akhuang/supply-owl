@@ -1,6 +1,6 @@
 model:
-  default: "qwen3:8b"
-  provider: "main"
+  default: "qwen3:32b"
+  provider: "custom"
   base_url: "http://localhost:11434/v1"
   api_key: "ollama"
 

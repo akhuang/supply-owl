@@ -9,6 +9,50 @@ import sys
 from pathlib import Path
 
 from dotenv import dotenv_values
+import yaml
+
+
+def _load_project_cli_config(project_root: Path) -> dict:
+    config_path = project_root / "cli-config.yaml"
+    if not config_path.exists():
+        return {}
+
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    return config if isinstance(config, dict) else {}
+
+
+def _write_hermes_config(project_root: Path, hermes_home: Path, env: dict[str, str]) -> None:
+    config = _load_project_cli_config(project_root)
+
+    model_config = config.get("model", {})
+    if isinstance(model_config, str):
+        model_config = {"default": model_config}
+    elif not isinstance(model_config, dict):
+        model_config = {}
+
+    llm_model = env.get("LLM_MODEL", "").strip()
+    llm_base_url = env.get("LLM_BASE_URL", "").strip()
+    llm_api_key = env.get("LLM_API_KEY", "").strip()
+
+    if llm_model:
+        model_config["default"] = llm_model
+    if llm_base_url:
+        model_config["provider"] = "custom"
+        model_config["base_url"] = llm_base_url
+        env["OPENAI_BASE_URL"] = llm_base_url
+    if llm_api_key:
+        model_config["api_key"] = llm_api_key
+        env["OPENAI_API_KEY"] = llm_api_key
+    if llm_base_url or llm_api_key:
+        env["HERMES_INFERENCE_PROVIDER"] = "custom"
+
+    if model_config:
+        config["model"] = model_config
+
+    (hermes_home / "config.yaml").write_text(
+        yaml.safe_dump(config, allow_unicode=True, sort_keys=False),
+        encoding="utf-8",
+    )
 
 
 def prepare_runtime_env(project_root: Path) -> dict[str, str]:
@@ -28,6 +72,7 @@ def prepare_runtime_env(project_root: Path) -> dict[str, str]:
     hermes_home = project_root / ".hermes"
     hermes_home.mkdir(exist_ok=True)
     (hermes_home / ".env").write_text(env_file.read_text(encoding="utf-8"), encoding="utf-8")
+    _write_hermes_config(project_root, hermes_home, env)
     env["HERMES_HOME"] = str(hermes_home)
     return env
 

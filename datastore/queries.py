@@ -38,34 +38,43 @@ def analyze_batch(b: ContractBatch) -> dict:
     short = b.short_item in ("Y", "1") if b.short_item else False
     related = b.related_contract_no
 
+    # 资源统筹 / 大调度：具体到人
+    coordinator = b.coordinator or "未知资源统筹"
+    dispatcher = b.dispatcher or "未知大调度"
+
     # CPD vs RPD 判断
     if not cpd:
         status = "uncommitted"
         risk_label = "未承诺"
-        contact_role = "承诺坐席"
-        contact_reason = "未承诺 → 承诺坐席"
+        # 未承诺 → 找资源统筹
+        if related:
+            contact_name = coordinator  # TODO: 应该找00E的资源统筹
+            contact_reason = f"未承诺+有关联00E → {related}的资源统筹"
+        else:
+            contact_name = coordinator
+            contact_reason = "未承诺 → 资源统筹"
     elif rpd and cpd > rpd:
         gap = _days_diff(rpd, cpd)
         status = "not_met"
         risk_label = f"不满足(差{gap}天)"
         if (b.batch_no or "").startswith("HWA"):
-            contact_role = "大调度"
-            contact_reason = "HWA开头 → 直接用1Y0找大调度"
+            contact_name = dispatcher
+            contact_reason = f"HWA批次 → 大调度 {dispatcher}"
         elif related:
-            contact_role = "大调度"
-            contact_reason = f"有关联00E → 用{related}找大调度"
+            contact_name = dispatcher  # 用00E追到1Y0产品对应的大调度
+            contact_reason = f"有关联00E → 用{related}找大调度 {dispatcher}"
         else:
-            contact_role = "提拉座席"
-            contact_reason = "非HWA+无00E → 提拉座席"
+            contact_name = coordinator
+            contact_reason = f"非HWA+无00E → 资源统筹 {coordinator}"
     elif apd:
         status = "delivered"
         risk_label = "已交单"
-        contact_role = None
+        contact_name = None
         contact_reason = None
     else:
         status = "met"
         risk_label = "满足"
-        contact_role = None
+        contact_name = None
         contact_reason = None
 
     pull_target = rpd if status == "not_met" else None
@@ -79,7 +88,7 @@ def analyze_batch(b: ContractBatch) -> dict:
         "risk_label": risk_label,
         "urgent": urgent,
         "short": short,
-        "contact_role": contact_role,
+        "contact_name": contact_name,
         "contact_reason": contact_reason,
         "pull_target": pull_target,
         "dispatcher": b.dispatcher,
@@ -130,30 +139,30 @@ def build_dashboard(db: OwlDB) -> dict:
         if analysis.get("found"):
             contracts.append(analysis)
 
-    # 按联系人角色分组（只分组需要行动的批次）
+    # 按具体联系人分组（只分组需要行动的批次）
     groups: dict[str, dict] = {}
     for c in contracts:
         for b in c["batches"]:
-            role = b["contact_role"]
-            if not role:
+            name = b["contact_name"]
+            if not name:
                 continue
-            if role not in groups:
-                groups[role] = {"role": role, "contracts": {}}
+            if name not in groups:
+                groups[name] = {"contact": name, "contracts": {}}
             cno = c["contract"]
-            if cno not in groups[role]["contracts"]:
-                groups[role]["contracts"][cno] = {
+            if cno not in groups[name]["contracts"]:
+                groups[name]["contracts"][cno] = {
                     "contract": cno,
                     "project": c["project"],
                     "customer": c["customer"],
                     "batches": [],
                 }
-            groups[role]["contracts"][cno]["batches"].append(b)
+            groups[name]["contracts"][cno]["batches"].append(b)
 
     alert_groups = []
     for g in groups.values():
         total_batches = sum(len(c["batches"]) for c in g["contracts"].values())
         alert_groups.append({
-            "role": g["role"],
+            "contact": g["contact"],
             "total_batches": total_batches,
             "total_contracts": len(g["contracts"]),
             "contracts": list(g["contracts"].values()),
