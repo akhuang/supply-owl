@@ -207,12 +207,18 @@ async def chat_endpoint(req: ChatRequest):
 
 @app.post("/api/sync")
 def sync_snapshot(snapshot_path: str = ""):
-    """从 supply-cli JSON 快照同步数据到 SQLite"""
+    """从 supply-cli store.json 同步数据到 SQLite
+
+    默认读 .env 里的 STORE_JSON_PATH（~/.supply-cli/store.json）
+    也可以传 snapshot_path 参数指定其他文件
+    """
     if not snapshot_path:
-        # 默认路径
-        snapshot_path = os.environ.get("SNAPSHOT_PATH", "")
+        snapshot_path = os.environ.get("STORE_JSON_PATH", "")
+    if snapshot_path:
+        snapshot_path = str(Path(snapshot_path).expanduser())
     if not snapshot_path or not Path(snapshot_path).exists():
-        return {"error": "快照文件不存在", "path": snapshot_path}
+        return {"error": "store.json 不存在", "path": snapshot_path,
+                "hint": "请先运行 supply-cli fetch，或在 .env 中设置 STORE_JSON_PATH"}
     stats = owl_db.import_snapshot(snapshot_path)
     return {"synced": True, **stats}
 
